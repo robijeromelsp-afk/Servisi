@@ -1,0 +1,6 @@
+{
+  "_readme": "Apps Script deployments. Not secret: IDs only. Credentials are GitHub secrets named in 'secret'. Empty scriptId/deploymentId are created by the first run of the deploy workflow and then filled in here.",
+  "robi-test": { "secret": "CLASPRC_ROBI", "scriptId": "", "deploymentId": "", "production": false },
+  "robi-prod": { "secret": "CLASPRC_ROBI", "scriptId": "", "deploymentId": "", "production": true },
+  "lucija-prod": { "secret": "CLASPRC_LUCIJA", "scriptId": "", "deploymentId": "", "production": true }
+}

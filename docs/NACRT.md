@@ -187,7 +187,7 @@ Stolpci se iščejo po **imenu glave**, ne po položaju (past iz KT4). Datumi br
 | `rule_day` | 1–28 |
 | `rule_months` | npr. `3,6,9,12` |
 | `rule_month` | 1–12 |
-| `anchor_date` | prvi rok oziroma izhodišče |
+| `start_date` | prvi rok je na ta dan ali po njem |
 | `count_from` | `completion` (a) ali `calendar` (b) |
 | `last_done_before_app` | neobvezno |
 | `warn_days_before` | neobvezno |
@@ -204,7 +204,7 @@ Stolpci se iščejo po **imenu glave**, ne po položaju (past iz KT4). Datumi br
 | `done_date` | |
 | `done_by` | |
 | `note` | |
-| `result` | Done / DoneLate / Skipped (Skipped samodejno pri b1) |
+| ~~`result`~~ | ni shranjeno: zamuda in izpuščeni roki (b1) se vedno izračunajo iz zgodovine, da po preklicu ne morejo biti neskladni (odločitev med gradnjo, 5. 10. 2026) |
 | `void_at`, `void_by`, `void_reason` | preklic, nikoli brisanje |
 
 **Attachments** – `completion_id`, `drive_file_id`, `url`, `file_name`, `mime`, `size_bytes`, `kind` (Report / Invoice / Photo / Measurement / Other), `original_size_bytes` (za meritev prihranka).

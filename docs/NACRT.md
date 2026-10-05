@@ -29,8 +29,8 @@ Robi: »da, uredi tako«. Zato veljajo priporočila iz vprašanj:
 Še odprto (ni blokada za načrt, je pa blokada za izvedbo):
 
 1. Lucijin tip računa (gmail.com / Workspace) ni več odločilen za shranjevanje, ker je vse na Robijevem Drive. PREVERITI v koraku 1, ali njen račun lahko odpre deljeno tabelo (pri Workspace lahko skrbnik agencije prepove deljenje od zunaj).
-2. **MANJKA** – pod katerim računom teče Robijevo zaledje (robi.jeromel@gmail.com ali ločen račun, kot je tablica.toplarna pri KT4). Pošta gre s tega računa.
-3. **MANJKA** – ali je `dolb.si` v Robijevem Cloudflare računu (pri KT4 očitno je, `kt4.dolb.si`).
+2. ~~Račun Robijevega zaledja~~ – odločeno 5. 10. 2026: **robi.jeromel@gmail.com**. Pošta gre s tega naslova; tabela A in priloge so na istem Drive.
+3. ~~dolb.si~~ – odločeno 5. 10. 2026: domena je v Robijevem Cloudflare računu.
 4. **MANJKA** – največja pričakovana velikost PDF.
 5. **MANJKA** – `Vzdrzevalna_baza_toplarna.xlsx` (rabim jo pri koraku 2).
 
@@ -345,6 +345,22 @@ Edina skupna točka je **storitev za priloge**. Ločitev poteka takole:
 
 ---
 
+## 8a. Lucija lahko projekt prevzame v svoj Claude in gradi naprej
+
+Lucija ima svoj Claude Pro. Projekt mora biti zato **samozadosten v repozitoriju**: kdor ga odpre, iz njega razbere vse, brez dostopa do Robijevega Drive ali tega pogovora.
+
+- `CLAUDE.md` v korenu: pravila dela (MANJKA namesto izmišljanja, brez objave na produkcijo brez potrditve lastnika, ničesar ne briši, angleški gumbi), zgradba, kako zagnati teste, kako objaviti.
+- `docs/PRIROCNIK.md`: stanje, pasti, odločitve. Priročnik na Drive kaže nanj; vir resnice je repozitorij.
+- `docs/POSTAVITEV.md`: od nič do delujoče postavitve za **novega lastnika**: tabela, Apps Script, sprožilec, Cloudflare, OAuth Client ID, GitHub Secrets. Po tem postopku bo postavljena tudi Lucijina postavitev, tako da je preizkušen v praksi.
+- Nobena nastavitev postavitve ni v kodi (§2.1). Lucijina kopija repozitorija deluje z njenimi nastavitvami, ne da bi spreminjala kodo.
+- Testi izračuna rokov tečejo v GitHub Actions. Kdor koli spreminja kodo, takoj vidi, če je kaj pokvaril.
+
+Kako bi Lucija nadaljevala (izbere ob prevzemu, ne zdaj):
+1. **Skupen razvoj:** Robi jo doda kot sodelavko na repozitoriju; njen Claude dela na svojih vejah, spremembe gredo v `main` prek pull requesta. Ena koda za oba.
+2. **Lastna pot:** Lucija naredi fork (ali kopijo) v svoj GitHub, poveže svoj Cloudflare in svoj Apps Script po `docs/POSTAVITEV.md`, podatke prenese z Export → Import. Od tam naprej je koda njena.
+
+Za možnost 2 dodam **Import** (uvoz ZIP-a iz §7 v prazno tabelo) – brez tega selitev ne bi bila neodvisna od naju.
+
 ## 9. Zgradba repozitorija
 
 ```
@@ -353,7 +369,8 @@ backend/            Apps Script (*.js + appsscript.json)
 shared/schedule.js  izračun rokov (kopira se v backend ob gradnji)
 tests/              Node testi (node:test)
 seed/               predlagani šifrant (JSON, z oznako is_suggestion)
-docs/               NACRT.md, POSLOVNA-PRAVILA.md, NAVODILA-ZA-ROBIJA.md, SELITEV.md
+CLAUDE.md           pravila za Claude (in za vsakogar, ki nadaljuje)
+docs/               NACRT.md, PRIROCNIK.md, POSTAVITEV.md, POSLOVNA-PRAVILA.md, SELITEV.md
 .github/workflows/  testi ob potisku; ročna objava zaledja (test / prod)
 ```
 
@@ -372,7 +389,7 @@ Vsak korak se konča s preverjanjem na živi stvari. Če ga ne morem opraviti sa
 | **4** | Stran: prijava, Overview, Objects, Object, Obligation. | – |
 | **5** | Mark done + priloge s kamere. | test na tvojem telefonu |
 | **6** | Dnevno opravilo, pošta, odlogi, opozorila, Status. | – |
-| **7** | Export. | – |
+| **7** | Export + Import (uvoz v prazno tabelo, preizkus: izvoz → uvoz → enaki podatki). | – |
 | **8** | Predlagani šifrant (z oznako). | pregled seznama |
 | **9** | Celoten test na test okolju → **tvoja potrditev** → produkcija A → postavitev B za Lucijo. | potrditev |
 

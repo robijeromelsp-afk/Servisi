@@ -30,7 +30,7 @@ backend/             Apps Script (zaledje, JSON API, dnevno opravilo, pošta)
 frontend/            statična stran (Cloudflare Pages), brez ogrodja
 tests/               Node testi (node --test), brez zunanjih knjižnic
 tools/build.js       sestavi dist/backend in dist/frontend
-seed/                predlagani šifranti (z oznako is_suggestion)
+backend/seed.js      predlagani šifrant (z oznako is_suggestion, brez rokov)
 docs/                dokumentacija
 ```
 

@@ -54,6 +54,8 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 - V oblačnem okolju Claude `accounts.google.com` ni dosegljiv (certifikat) – e2e test zato Googlov
   skript nadomesti s praznim; prava prijava se preveri na pravi postavitvi.
 - `pkill -f <vzorec>` v ukazni vrstici ubije tudi lastno lupino (vzorec je v njenem ukazu) – ustavljati po PID/vratih.
+- GitHub pokaže gumb *Run workflow* (workflow_dispatch) samo za delovne tokove, ki so na privzeti veji (`main`).
+  Dokler je `deploy-backend.yml` samo na delovni veji, objave ni mogoče sprožiti – rabi združitev v `main`.
 - Prvi potisk v nov repozitorij je vrnil 403, dokler Claude GitHub App ni dobil dostopa.
 
 ## Ukazi

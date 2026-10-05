@@ -1,0 +1,86 @@
+name: deploy-backend
+
+# Manual only. Publishes the Apps Script backend of one deployment (deploy/targets.json).
+# Production targets need the target name typed again in "confirm".
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target from deploy/targets.json (e.g. robi-test)'
+        required: true
+      confirm:
+        description: 'For production targets: type the target name again'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: npm run build
+
+      - name: Read target
+        id: t
+        run: |
+          node -e '
+            const t = require("./deploy/targets.json")[process.env.TARGET];
+            if (!t || process.env.TARGET.startsWith("_")) { console.error("Unknown target " + process.env.TARGET); process.exit(1); }
+            if (t.production && process.env.CONFIRM !== process.env.TARGET) { console.error("Production target: type the target name in confirm."); process.exit(1); }
+            const fs = require("fs");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `secret=${t.secret}\nscriptId=${t.scriptId}\ndeploymentId=${t.deploymentId}\n`);
+          '
+        env:
+          TARGET: ${{ inputs.target }}
+          CONFIRM: ${{ inputs.confirm }}
+
+      - name: clasp credentials
+        run: |
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          test -s ~/.clasprc.json || { echo "Secret ${{ steps.t.outputs.secret }} is missing."; exit 1; }
+        env:
+          CLASPRC: ${{ secrets[steps.t.outputs.secret] }}
+
+      - name: Create Apps Script project (first run only)
+        if: steps.t.outputs.scriptId == ''
+        run: |
+          # In an empty folder, so that clasp cannot overwrite our appsscript.json.
+          mkdir -p /tmp/newscript && cd /tmp/newscript
+          npx -y @google/clasp@3.4.1 create-script --type standalone --title "Servisi (${{ inputs.target }})" --rootDir .
+          SID="$(node -p 'require("./.clasp.json").scriptId')"
+          echo "{\"scriptId\":\"$SID\",\"rootDir\":\".\"}" > "$GITHUB_WORKSPACE/dist/backend/.clasp.json"
+          echo "### New Apps Script project" >> $GITHUB_STEP_SUMMARY
+          echo "scriptId: \`$SID\`" >> $GITHUB_STEP_SUMMARY
+          echo "Put it into deploy/targets.json for ${{ inputs.target }}." >> $GITHUB_STEP_SUMMARY
+
+      - name: Link existing project
+        if: steps.t.outputs.scriptId != ''
+        working-directory: dist/backend
+        run: echo '{"scriptId":"${{ steps.t.outputs.scriptId }}","rootDir":"."}' > .clasp.json
+
+      - name: Push code (replaces the whole project with dist/backend)
+        working-directory: dist/backend
+        run: |
+          ls -la
+          npx -y @google/clasp@3.4.1 push --force
+
+      - name: Deploy (keeps the same URL when deploymentId is set)
+        working-directory: dist/backend
+        run: |
+          DESC="$(date -u +%Y-%m-%dT%H:%MZ) ${GITHUB_SHA::7}"
+          if [ -n "${{ steps.t.outputs.deploymentId }}" ]; then
+            npx -y @google/clasp@3.4.1 deploy -i "${{ steps.t.outputs.deploymentId }}" -d "$DESC" | tee deploy.log
+          else
+            npx -y @google/clasp@3.4.1 deploy -d "$DESC" | tee deploy.log
+            echo "### New deployment" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY; cat deploy.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "Put the deployment ID into deploy/targets.json for ${{ inputs.target }}." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f ~/.clasprc.json

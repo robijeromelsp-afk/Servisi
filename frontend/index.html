@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d4ed8">
+  <meta name="robots" content="noindex">
+  <title>Servisi</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css?v=__APP_VERSION__">
+  <script src="config.js?v=__APP_VERSION__"></script>
+  <script src="schedule.js?v=__APP_VERSION__"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="app.js?v=__APP_VERSION__"></script>
+</head>
+<body>
+  <div id="banner" hidden></div>
+  <header class="topbar">
+    <a href="#/" class="brand">Servisi</a>
+    <span id="org-name" class="org"></span>
+    <nav class="topnav" id="topnav" hidden>
+      <a href="#/" data-nav="overview">Overview</a>
+      <a href="#/objects" data-nav="objects">Objects</a>
+      <a href="#/settings" data-nav="settings">Settings</a>
+    </nav>
+  </header>
+  <main id="app"><p class="muted center">Loading…</p></main>
+  <nav class="bottomnav" id="bottomnav" hidden>
+    <a href="#/" data-nav="overview"><span class="ico">◉</span>Overview</a>
+    <a href="#/objects" data-nav="objects"><span class="ico">▦</span>Objects</a>
+    <a href="#/settings" data-nav="settings"><span class="ico">⚙</span>Settings</a>
+  </nav>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <noscript>This application needs JavaScript.</noscript>
+</body>
+</html>

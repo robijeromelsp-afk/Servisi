@@ -15,7 +15,7 @@ Robi: »da, uredi tako«. Zato veljajo priporočila iz vprašanj:
 
 | # | Odločitev |
 |---|---|
-| A | Priloge shranjuje **storitev pod Robijevim računom**. Lastnik datotek je Robi, ne glede na to, kdo jih naloži. Pošta gre vedno z računa uporabnikove postavitve. |
+| A | **Vse je na Robijevem Drive** (odločitev 5. 10. 2026): obe tabeli, vse priloge, izvozi. Lastnik vsega je Robi. Lucija ima dostop do svoje tabele in svoje mape, ne do Robijevih. Podatki se v aplikaciji **nikoli ne mešajo**: ločena tabela, ločena mapa, ločena organizacija. Pošta gre z računa uporabnikove postavitve (glej §2.3). |
 | B | Koledarsko štetje ob zamudi: **b1**. Naslednji rok je prvi koledarski rok po kasnejšem od dveh datumov (rok, datum izvedbe). Vmesni zamujeni roki se zapišejo kot »izpuščeno«. |
 | C | Model periodike pozna vseh 8 tipov. V vmesniku so »dan«, »teden« in »N_dni« pod 30 dni skriti za »Advanced«. Ob vnosu se lahko vpiše »nazadnje opravljeno«. |
 | D | Šifrant vrst je **brez privzete periodike**. Vsaka predlagana vrsta ima oznako »Suggested – not verified«. Šifrant je ločen za vsako organizacijo. |
@@ -28,7 +28,7 @@ Robi: »da, uredi tako«. Zato veljajo priporočila iz vprašanj:
 
 Še odprto (ni blokada za načrt, je pa blokada za izvedbo):
 
-1. **MANJKA** – ali je Lucijin naslov gmail.com ali Google Workspace agencije. Vpliva na deljenje map in na prijavo.
+1. Lucijin tip računa (gmail.com / Workspace) ni več odločilen za shranjevanje, ker je vse na Robijevem Drive. PREVERITI v koraku 1, ali njen račun lahko odpre deljeno tabelo (pri Workspace lahko skrbnik agencije prepove deljenje od zunaj).
 2. **MANJKA** – pod katerim računom teče Robijevo zaledje (robi.jeromel@gmail.com ali ločen račun, kot je tablica.toplarna pri KT4). Pošta gre s tega računa.
 3. **MANJKA** – ali je `dolb.si` v Robijevem Cloudflare računu (pri KT4 očitno je, `kt4.dolb.si`).
 4. **MANJKA** – največja pričakovana velikost PDF.
@@ -58,6 +58,20 @@ Varovala, vgrajena v zasnovo:
 
 ## 2. Arhitektura
 
+**Ločevanje Robi / Lucija (odločitev 5. 10. 2026):**
+
+| Kaj | Robi | Lucija |
+|---|---|---|
+| Tabela | `Servisi – <org A>` na Robijevem Drive | `Servisi – <org B>` na Robijevem Drive, deljena z Lucijo |
+| Priloge | `Priloge/<org A>/` | `Priloge/<org B>/`, deljena z Lucijo (bralka) |
+| Zaledje (Apps Script) | teče pod Robijem | teče pod Lucijo, **samo zaradi pošte z njenega naslova**; bere in piše tabelo B na Robijevem Drive |
+| Kaj vidi v aplikaciji | samo org A | samo org B |
+| Lastnik datotek, kvota | Robi | Robi |
+
+Lucija v aplikaciji ne more priti do podatkov org A: njeno zaledje pozna samo ID tabele B in njen e-naslov je samo v »Users« tabele B.
+Robi kot lastnik Drive datotek tehnično lahko odpre tabelo B v Drive. Če Robi želi videti tudi Lucijine obveznosti v aplikaciji, se ga doda v »Users« tabele B (ločena izbira organizacije, podatki se ne združijo).
+PREVERITI v koraku 1: Apps Script, ki teče pod Lucijo, odpre in piše tabelo, ki je deljena z njo kot urejevalko (po mojem znanju gre, ker tabela ne porabi kvote za priloge – ni preverjeno).
+
 ```
  telefon / računalnik
         │  (Google prijava, ID žeton)
@@ -69,7 +83,8 @@ Varovala, vgrajena v zasnovo:
         │      + STORITEV ZA PRILOGE (piše v Robijev Drive)
         │
         └─► Zaledje B (Apps Script, teče pod Lucijinim računom)
-               tabela B, pošta z Lucijinega naslova
+               tabela B = NA ROBIJEVEM DRIVE, deljena z Lucijo (urejevalka)
+               pošta z Lucijinega naslova
                priloge pošlje stran neposredno storitvi za priloge v A
 ```
 

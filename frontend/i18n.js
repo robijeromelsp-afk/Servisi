@@ -304,6 +304,12 @@ const SL = {
   'Result': 'Rezultat',
   'E-mail quota left today': 'Preostala dnevna kvota pošte',
   'Recent e-mails': 'Zadnja sporočila',
+  'mail:Monthly': 'Mesečna pošta',
+  'mail:Warning': 'Opozorilo pred rokom',
+  'mail:Snooze': 'Opomnik',
+  'mail:WeeklyOverdue': 'Tedenski opomnik',
+  'mail:Test': 'Testno sporočilo',
+  'mail:Quote': 'Povpraševanje',
   'Sent': 'Poslano',
   'Kind ': 'Vrsta',
   'To': 'Prejemnik',
@@ -364,7 +370,12 @@ const SL = {
   'No organisation selected.': 'Organizacija ni izbrana.'
 };
 
-const DICTS = { sl: SL, en: {} };
+const EN = {
+  'mail:Monthly': 'Monthly', 'mail:Warning': 'Warning before due', 'mail:Snooze': 'Reminder',
+  'mail:WeeklyOverdue': 'Weekly reminder', 'mail:Test': 'Test e-mail', 'mail:Quote': 'Quote request'
+};
+
+const DICTS = { sl: SL, en: EN };
 
 function load() {
   try { return localStorage.getItem(KEY); } catch (e) { return null; }

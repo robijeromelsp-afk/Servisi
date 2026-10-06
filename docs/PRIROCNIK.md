@@ -60,6 +60,9 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 6. `docs/SELITEV.md` – postopek selitve prilog.
 
 ## Pasti
+- Pri prevajanju: besedila, ki so hkrati vrednosti (npr. 'Overdue', 'Report', 'User'), so bila izpuščena iz
+  samodejnega ovijanja s t() – zavihki na Pregledu so ostali angleški. Zdaj e2e v slovenščini obišče vse zaslone
+  in javi vsako angleško besedilo iz slovarja (`tests/e2e.js`, korak »no English text left«).
 - Ime spremenljivke `t` v funkciji zasenči prevajalnik `t()` (zgodilo se v obrazcu obveznosti) – ne uporabljaj `t` kot ime.
 - Nov stolpec v SCHEMA: povečaj `SCHEMA_VERSION` v `backend/db.js`, sicer obstoječa tabela ne dobi stolpca do dnevnega teka.
 - Iz oblačnega okolja Claude `*.pages.dev` in `servisi.dolb.si` nista dosegljiva (proxy 403); `script.google.com` je.

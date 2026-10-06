@@ -255,8 +255,8 @@ async function viewOverview() {
   const noObligations = activeObjects.filter((obj) => !live.some((o) => o.object_id === obj.id));
   const noResponsible = activeObjects.filter((obj) => !obj.responsible_user_id);
   const attentionCount = buckets.attention.length + noObligations.length + noResponsible.length;
-  const tabs = [['overdue', 'Overdue', buckets.overdue.length], ['thisMonth', 'This month', buckets.thisMonth.length],
-    ['nextMonth', 'Next month', buckets.nextMonth.length], ['snoozed', t('Snoozed'), buckets.snoozed.length],
+  const tabs = [['overdue', t('Overdue'), buckets.overdue.length], ['thisMonth', t('This month'), buckets.thisMonth.length],
+    ['nextMonth', t('Next month'), buckets.nextMonth.length], ['snoozed', t('Snoozed'), buckets.snoozed.length],
     ['attention', t('Needs attention'), attentionCount]];
   const body = h('div', {});
   const render = () => {
@@ -1001,7 +1001,7 @@ async function settingsStatus(el) {
   h('div', { class: 'actions' }, run, install),
   h('h2', {}, t('Recent e-mails')),
   h('div', { class: 'card' }, st.recentMail.length ? h('table', {}, h('tr', {}, h('th', {}, t('Sent')), h('th', {}, t('Kind ')), h('th', {}, t('To')), h('th', {}, t('Items')), h('th', {}, t('Result'))),
-    st.recentMail.map((m) => h('tr', {}, h('td', {}, fmtDateTime(m.sent_at)), h('td', {}, m.kind), h('td', {}, m.recipient), h('td', {}, m.items),
+    st.recentMail.map((m) => h('tr', {}, h('td', {}, fmtDateTime(m.sent_at)), h('td', {}, t('mail:' + m.kind)), h('td', {}, m.recipient), h('td', {}, m.items),
       h('td', {}, m.ok === 'true' ? 'OK' : h('span', { class: 'error' }, m.error))))) : h('p', { class: 'muted' }, t('No e-mails sent yet.'))));
 }
 

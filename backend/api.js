@@ -1,7 +1,7 @@
 /**
  * JSON API of the web app.
  *
- * Request:  POST, body (text/plain) = JSON { action, idToken, data }
+ * Request:  POST, body (text/plain) = JSON { action, idToken, data, lang }   (lang: language of error messages, sl|en)
  * Response: JSON { ok: true, data } or { ok: false, error: { code, message } }
  * Apps Script cannot set HTTP status codes, so errors are reported in the body.
  */
@@ -48,8 +48,10 @@ function doGet() {
 
 function doPost(e) {
   var out;
+  var lang = 'en';
   try {
     var req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    lang = req.lang === 'sl' ? 'sl' : 'en';
     out = { ok: true, data: handle_(req) };
   } catch (err) {
     if (!err.appCode) console.error(err && err.stack ? err.stack : err);
@@ -57,7 +59,7 @@ function doPost(e) {
       ok: false,
       error: {
         code: err.appCode || 'ERROR',
-        message: err.appCode ? err.message : 'Unexpected server error: ' + (err && err.message)
+        message: translateError_(err.appCode ? err.message : 'Unexpected server error: ' + (err && err.message), lang)
       }
     };
   }
@@ -161,7 +163,8 @@ function apiSetup_(idToken, data) {
   var settings = {
     monthly_day: '1', run_hour: '6', weekly_overdue_reminder: 'true',
     app_url: String(data.appUrl || ''), storage_url: String(data.storageUrl || ''),
-    storage_enabled: data.storageUrl ? 'false' : 'true', mail_sender_name: 'Servisi'
+    storage_enabled: data.storageUrl ? 'false' : 'true', mail_sender_name: 'Servisi',
+    language: LANGUAGES.indexOf(data.language) >= 0 ? data.language : 'sl'
   };
   Object.keys(settings).forEach(function (k) { kvSet_('Settings', org.id, k, settings[k], owner); });
   seedCatalog_(org.id, owner);

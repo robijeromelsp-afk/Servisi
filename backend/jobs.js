@@ -75,6 +75,16 @@ function recomputeAll_(ctx, actor) {
 
 // ------------------------------------------------------------------ recipients
 
+/** Address for e-mail: the user's notification address (e.g. work e-mail), else the sign-in address. */
+function mailOf_(user) {
+  return (user.notify_email || user.email).toLowerCase();
+}
+
+function mailForLogin_(data, loginEmail) {
+  var id = Object.keys(data.users).filter(function (k) { return data.users[k].email === loginEmail; })[0];
+  return id ? mailOf_(data.users[id]) : loginEmail;
+}
+
 function loadMailData_(ctx) {
   var index = function (list) {
     var m = {};
@@ -105,12 +115,12 @@ function recipientsOf_(o, data) {
   var out = {};
   var obj = data.objects[o.object_id];
   var resp = obj && data.users[obj.responsible_user_id];
-  if (resp) out[resp.email] = true;
-  else data.admins.forEach(function (a) { out[a.email] = true; });
+  if (resp) out[mailOf_(resp)] = true;
+  else data.admins.forEach(function (a) { out[mailOf_(a)] = true; });
   var extra = [];
   try { extra = o.extra_recipients ? JSON.parse(o.extra_recipients) : []; } catch (e) { extra = []; }
   extra.forEach(function (r) {
-    if (r.userId && data.users[r.userId]) out[data.users[r.userId].email] = true;
+    if (r.userId && data.users[r.userId]) out[mailOf_(data.users[r.userId])] = true;
     else if (r.email && !(r.email in out)) out[r.email] = false;
   });
   return out;
@@ -151,7 +161,7 @@ function sendMonthly_(ctx, data) {
   var period = monthKey_(ctx.today);
   var perRecipient = {};
   var userEmails = {};
-  Object.keys(data.users).forEach(function (id) { userEmails[data.users[id].email] = true; });
+  Object.keys(data.users).forEach(function (id) { userEmails[mailOf_(data.users[id])] = true; });
   // Every application user gets the monthly e-mail, even when empty (proof the system works).
   Object.keys(userEmails).forEach(function (e) { perRecipient[e] = []; });
   data.obligations.forEach(function (o) {
@@ -186,7 +196,8 @@ function sendWarnings_(ctx, data) {
     var rec = recipientsOf_(o, data);
     Object.keys(rec).forEach(function (email) {
       if (alreadySent_(data, 'Warning', o.next_due, email, o.id)) return;
-      var msg = singleMessage_(ctx, data, o, 'Due on ' + fmtDate_(o.next_due), 'is due on ' + fmtDate_(o.next_due) + '.', !rec[email]);
+      var d = fmtDate_(o.next_due);
+      var msg = singleMessage_(ctx, data, o, tr_(data.settings, 'dueOnTitle', { d: d }), tr_(data.settings, 'dueOnSentence', { d: d }), !rec[email]);
       sendMail_(ctx.orgId, 'Warning', o.next_due, email, o.id, msg, 1);
       sent++;
     });
@@ -207,10 +218,10 @@ function sendReminders_(ctx, data) {
       t_('Snoozes').update(s.id, ctx.orgId, { cancelled_at: nowIso_(), cancelled_by: 'obligation archived' }, 'daily job');
       return;
     }
-    var to = s.created_by;
-    var note = s.note ? ' Your note: "' + s.note + '".' : '';
-    var msg = singleMessage_(ctx, data, o, 'Reminder', 'reminder you asked for.' + note +
-      (o.next_due ? ' Regular due date: ' + fmtDate_(o.next_due) + '.' : ''), false);
+    var to = mailForLogin_(data, s.created_by);
+    var note = s.note ? tr_(data.settings, 'yourNote', { n: s.note }) : '';
+    var msg = singleMessage_(ctx, data, o, tr_(data.settings, 'reminderTitle'), tr_(data.settings, 'reminderSentence') + note +
+      (o.next_due ? tr_(data.settings, 'regularDue', { d: fmtDate_(o.next_due) }) : ''), false);
     sendMail_(ctx.orgId, 'Snooze', s.remind_on, to, s.id, msg, 1);
     t_('Snoozes').update(s.id, ctx.orgId, { sent_at: nowIso_() }, 'daily job');
     sent++;
@@ -256,10 +267,9 @@ function notifyAdminsOfFailure_(ctx, errors) {
   data.admins.forEach(function (a) {
     try {
       MailApp.sendEmail({
-        to: a.email,
-        subject: 'Servisi: daily check failed',
-        body: 'The daily check of ' + data.org.name + ' on ' + ctx.today + ' reported errors:\n\n' +
-          errors.join('\n') + '\n\nOpen Settings > Status in the application.'
+        to: mailOf_(a),
+        subject: tr_(data.settings, 'failedSubject'),
+        body: tr_(data.settings, 'failedBody', { org: data.org.name, d: fmtDate_(ctx.today), e: errors.join('\n') })
       });
     } catch (e) {
       console.error('Failure notice could not be sent: ' + e.message);

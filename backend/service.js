@@ -4,7 +4,7 @@
 
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 var CATALOGS = { ObjectKinds: 'Admin', ObligationGroups: 'Admin', ObligationTypes: 'Admin', Contractors: 'User' };
-var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name'];
+var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name', 'language'];
 
 function t_(name) {
   return db_().table(name);
@@ -69,7 +69,7 @@ function apiBootstrap_(ctx) {
     status: { last_daily_run_at: status.last_daily_run_at || '', last_daily_run_ok: status.last_daily_run_ok || '' },
     users: t_('Users').list(ctx.orgId, { includeArchived: true }).map(function (u) {
       return { id: u.id, email: u.email, display_name: u.display_name, role: u.role, active: u.active,
-        archived_at: u.archived_at, rev: u.rev };
+        notify_email: u.notify_email, archived_at: u.archived_at, rev: u.rev };
     }),
     objectKinds: t_('ObjectKinds').list(ctx.orgId, { includeArchived: true }),
     obligationGroups: t_('ObligationGroups').list(ctx.orgId, { includeArchived: true }),
@@ -358,7 +358,9 @@ function apiSaveUser_(ctx, d) {
   if (d.id && (role !== 'Admin' || active !== 'true') && !activeAdmins_(ctx.orgId, d.id).length) {
     throw appError_('INVALID', 'At least one active administrator is required.');
   }
-  var rec = { email: email, display_name: str_(d.display_name) || email, role: role, active: active };
+  var notify = str_(d.notify_email).toLowerCase();
+  if (notify && !EMAIL_RE.test(notify)) throw appError_('INVALID', 'E-mail for notifications is not valid.');
+  var rec = { email: email, display_name: str_(d.display_name) || email, role: role, active: active, notify_email: notify };
   if (d.id) return t_('Users').update(d.id, ctx.orgId, rec, ctx.email, d.rev);
   return t_('Users').insert(ctx.orgId, rec, ctx.email);
 }
@@ -372,7 +374,8 @@ function apiSaveSettings_(ctx, d) {
     if (k === 'monthly_day') s = intOrEmpty_(s, 1, 28, 'Day of the monthly e-mail') || '1';
     if (k === 'run_hour') s = intOrEmpty_(s, 0, 23, 'Hour') || '6';
     if (k === 'weekly_overdue_reminder') s = s === 'true' ? 'true' : 'false';
-    if ((k === 'app_url' || k === 'storage_url') && s && !/^https:\/\//.test(s)) {
+    if (k === 'language' && LANGUAGES.indexOf(s) < 0) throw appError_('INVALID', 'Unknown language.');
+    if ((k === 'app_url' || k === 'storage_url') && s && !/^(https:\/\/|http:\/\/localhost[:/])/.test(s)) {
       throw appError_('INVALID', 'Links must start with https://');
     }
     kvSet_('Settings', ctx.orgId, k, s, ctx.email);
@@ -418,11 +421,12 @@ function apiInstallDailyTrigger_(ctx) {
 
 function apiSendTestEmail_(ctx) {
   var settings = kvAll_('Settings', ctx.orgId);
-  sendMail_(ctx.orgId, 'Test', ctx.today, ctx.email, '', {
-    subject: 'Servisi: test e-mail',
-    html: '<p>This is a test e-mail from Servisi (' + esc_(orgOf_(ctx.orgId).name) + ').</p>' +
-      '<p>If you can read this, e-mail sending works.</p>' + mailFooter_(settings),
-    text: 'This is a test e-mail from Servisi. If you can read this, e-mail sending works.'
+  var to = mailOf_(ctx.user);
+  sendMail_(ctx.orgId, 'Test', ctx.today, to, '', {
+    subject: tr_(settings, 'testSubject'),
+    html: '<p>' + esc_(tr_(settings, 'testLine1', { org: orgOf_(ctx.orgId).name })) + '</p>' +
+      '<p>' + esc_(tr_(settings, 'testLine2')) + '</p>' + mailFooter_(settings),
+    text: tr_(settings, 'testLine1', { org: orgOf_(ctx.orgId).name }) + ' ' + tr_(settings, 'testLine2')
   }, 0);
-  return { sentTo: ctx.email };
+  return { sentTo: to };
 }

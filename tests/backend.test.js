@@ -6,9 +6,9 @@ const { createBackend } = require('./gas-mock.js');
 const OWNER = 'owner@example.com';
 const USER = 'user@example.com';
 
-function setUp(opts) {
+function setUp(opts, language = 'en') {
   const b = createBackend(opts);
-  b.ok('setup', OWNER, { orgName: 'Test Org', displayName: 'Owner', appUrl: 'https://app.example.com' });
+  b.ok('setup', OWNER, { orgName: 'Test Org', displayName: 'Owner', appUrl: 'https://app.example.com', language });
   return b;
 }
 
@@ -395,4 +395,57 @@ test('export contains every table; import into an empty deployment reproduces th
   assert.equal(imported.next_due, '2028-01-15');
   assert.equal(boot.objects[0].created_by, OWNER);
   assert.equal(b.call('importData', 'new@example.com', { data }).ok, false, 'second import refused');
+});
+
+// ------------------------------------------------------------------ language
+
+test('Slovenian (default): e-mails and error messages', () => {
+  const b = createBackend();
+  b.ok('setup', OWNER, { orgName: 'Test Org', appUrl: 'https://app.example.com' });
+  assert.equal(b.ok('bootstrap', OWNER).settings.language, 'sl');
+  const obj = makeObject(b);
+  makeObligation(b, obj.id, { ...YEARLY, warn_days_before: 20 });
+  b.setNow('2027-01-04T06:00:00Z');
+  b.runDaily();
+  const monthly = b.state.mails.find((m) => /Obveznosti za 01\/2027/.test(m.subject));
+  assert.ok(monthly, 'monthly e-mail in Slovenian');
+  assert.match(monthly.body, /Zapade ta mesec \(1\)/);
+  assert.match(monthly.htmlBody, /ne daje pravnih nasvetov/);
+  assert.ok(b.state.mails.some((m) => /Rok 15\.01\.2027/.test(m.subject)), 'warning in Slovenian');
+  // error messages follow the language of the request
+  const raw = (lang) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({
+    action: 'saveObject', idToken: `fake:${OWNER}:${b.state.clientId}`, data: { code: '', name: 'X' }, lang }) } }).getContent());
+  assert.equal(raw('sl').error.message, 'Oznaka je obvezen podatek.');
+  assert.equal(raw('en').error.message, 'Code is required.');
+  b.ok('saveSettings', OWNER, { values: { language: 'en' } });
+  assert.equal(b.call('saveSettings', OWNER, { values: { language: 'de' } }).ok, false);
+});
+
+test('notifications go to the work address when set; sign-in stays with the Google account', () => {
+  const b = setUp();
+  b.ok('saveUser', OWNER, { email: USER, display_name: 'User', role: 'User', notify_email: 'User@Work.example' });
+  assert.equal(b.call('saveUser', OWNER, { email: 'x@example.com', notify_email: 'not-an-email' }).ok, false);
+  const user = b.ok('bootstrap', OWNER).users.find((u) => u.email === USER);
+  const obj = makeObject(b, OWNER, { responsible_user_id: user.id });
+  const o = makeObligation(b, obj.id, YEARLY);
+  b.setNow('2027-01-04T06:00:00Z');
+  b.ok('snooze', USER, { obligation_id: o.id, days: 1 });
+  b.runDaily();
+  b.setNow('2027-01-05T06:00:00Z');
+  b.runDaily();
+  assert.equal(b.state.mails.filter((m) => m.to === USER).length, 0);
+  const work = b.state.mails.filter((m) => m.to === 'user@work.example');
+  assert.ok(work.some((m) => /Obligations for/.test(m.subject)), 'monthly to work address');
+  assert.ok(work.some((m) => /Reminder/.test(m.subject)), 'reminder to work address');
+  assert.equal(b.ok('bootstrap', USER).me.email, USER);
+});
+
+test('schema migration: an older sheet gets new columns on the first request', () => {
+  const b = setUp();
+  const sheet = b.spreadsheet().getSheetByName('Users');
+  const col = sheet.cells[0].indexOf('notify_email');
+  sheet.cells.forEach((row) => row.splice(col, 1)); // as deployed before the column existed
+  b.state.props.SCHEMA_VERSION = '1';
+  assert.ok(b.ok('bootstrap', OWNER).me);
+  assert.ok(sheet.cells[0].includes('notify_email'));
 });

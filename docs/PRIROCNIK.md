@@ -21,6 +21,9 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026 – **POSTOPEK OBJAVE:** ko Robi napiše »objavi«, Claude sam združi PR v `main` (Cloudflare objavi
+  stran), objavi zaledje in preveri delovanje. Brez besede »objavi« ni objave na `servisi.dolb.si` ali produkcijo.
+  Delo na testni postavitvi (`robi-test`) brez spraševanja.
 - 6. 10. 2026: aplikacija in pošta v **slovenščini**, angleščina pripravljena (nastavitev »language«
   v Settings > Notifications). Prej je veljalo: gumbi angleško – Robi spremenil.
 - 6. 10. 2026: uporabnik ima lahko **e-naslov za obvestila** (npr. službeni); prijava ostane z Google računom.

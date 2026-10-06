@@ -176,13 +176,51 @@ function normalizeRecipients_(ctx, list) {
   return JSON.stringify(out);
 }
 
+/** Obligation type by name (case-insensitive); a new name is added as a user-defined type. */
+function findOrCreateType_(ctx, name) {
+  var all = t_('ObligationTypes').list(ctx.orgId, { includeArchived: true });
+  var found = all.filter(function (x) { return !x.archived_at && x.name.toLowerCase() === name.toLowerCase(); })[0] ||
+    all.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0];
+  if (found && found.archived_at) found = t_('ObligationTypes').restore(found.id, ctx.orgId, ctx.email);
+  if (!found) {
+    found = t_('ObligationTypes').insert(ctx.orgId, { group_id: '', name: name, description: '', is_suggestion: 'false',
+      sort: String((all.length + 1) * 10) }, ctx.email);
+  }
+  return found.id;
+}
+
+/**
+ * Contractor by name (case-insensitive); a new name is added. A given e-mail or phone
+ * completes or updates the contractor record.
+ */
+function findOrCreateContractor_(ctx, d) {
+  var name = str_(d.contractor_name);
+  if (!name) return '';
+  var email = str_(d.contractor_email).toLowerCase();
+  var phone = str_(d.contractor_phone);
+  if (email && !EMAIL_RE.test(email)) throw appError_('INVALID', 'Contractor e-mail is not valid.');
+  var all = t_('Contractors').list(ctx.orgId, { includeArchived: true });
+  var found = all.filter(function (x) { return !x.archived_at && x.name.toLowerCase() === name.toLowerCase(); })[0] ||
+    all.filter(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })[0];
+  if (found && found.archived_at) found = t_('Contractors').restore(found.id, ctx.orgId, ctx.email);
+  if (!found) {
+    return t_('Contractors').insert(ctx.orgId, { name: name, contact_person: '', phone: phone, email: email, note: '' }, ctx.email).id;
+  }
+  var changes = {};
+  if (email && email !== found.email) changes.email = email;
+  if (phone && phone !== found.phone) changes.phone = phone;
+  if (Object.keys(changes).length) t_('Contractors').update(found.id, ctx.orgId, changes, ctx.email);
+  return found.id;
+}
+
 function apiSaveObligation_(ctx, d) {
   var obj = t_('Objects').require(str_(d.object_id), ctx.orgId, 'Object');
   if (obj.archived_at) throw appError_('INVALID', 'The object is archived.');
   var rec = {
     object_id: obj.id,
-    type_id: requireText_(d.type_id, 'Obligation type'),
-    contractor_id: str_(d.contractor_id),
+    type_id: d.type_name !== undefined && !str_(d.type_id) ? findOrCreateType_(ctx, requireText_(d.type_name, 'Obligation type'))
+      : requireText_(d.type_id, 'Obligation type'),
+    contractor_id: d.contractor_name !== undefined ? findOrCreateContractor_(ctx, d) : str_(d.contractor_id),
     note: str_(d.note),
     rule_type: str_(d.rule_type),
     rule_weekday: intOrEmpty_(d.rule_weekday, 1, 7, 'Weekday'),
@@ -201,7 +239,7 @@ function apiSaveObligation_(ctx, d) {
   if (rec.last_done_before_app && rec.last_done_before_app > ctx.today) {
     throw appError_('INVALID', 'Last done date cannot be in the future.');
   }
-  t_('ObligationTypes').require(rec.type_id, ctx.orgId, 'Obligation type');
+  if (rec.type_id) t_('ObligationTypes').require(rec.type_id, ctx.orgId, 'Obligation type');
   if (rec.contractor_id) t_('Contractors').require(rec.contractor_id, ctx.orgId, 'Contractor');
 
   var completions = d.id ? completionsByObligation_(ctx.orgId)[d.id] : [];

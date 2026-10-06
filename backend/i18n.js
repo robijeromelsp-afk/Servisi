@@ -50,6 +50,7 @@ var ERRORS_SL = {
   'The reminder date must be after today.': 'Datum opomnika mora biti po današnjem dnevu.',
   'Unknown list.': 'Neznan šifrant.',
   'E-mail is not valid.': 'E-naslov ni veljaven.',
+  'Contractor e-mail is not valid.': 'E-naslov izvajalca ni veljaven.',
   'E-mail for notifications is not valid.': 'E-naslov za obvestila ni veljaven.',
   'This e-mail is already on the access list.': 'Ta e-naslov je že na seznamu dostopa.',
   'At least one active administrator is required.': 'Potreben je vsaj en aktiven skrbnik.',

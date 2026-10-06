@@ -4,7 +4,8 @@
 
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 var CATALOGS = { ObjectKinds: 'Admin', ObligationGroups: 'Admin', ObligationTypes: 'Admin', Contractors: 'User' };
-var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name', 'language'];
+var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name', 'language',
+  'quote_subject', 'quote_body'];
 
 function t_(name) {
   return db_().table(name);
@@ -64,7 +65,8 @@ function apiBootstrap_(ctx) {
     version: APP_VERSION,
     today: ctx.today,
     org: { id: org.id, name: org.name, timezone: org.timezone },
-    me: { id: ctx.user.id, email: ctx.user.email, display_name: ctx.user.display_name, role: ctx.user.role },
+    me: { id: ctx.user.id, email: ctx.user.email, display_name: ctx.user.display_name, role: ctx.user.role,
+      notify_email: ctx.user.notify_email },
     settings: settings,
     status: { last_daily_run_at: status.last_daily_run_at || '', last_daily_run_ok: status.last_daily_run_ok || '' },
     users: t_('Users').list(ctx.orgId, { includeArchived: true }).map(function (u) {
@@ -86,7 +88,7 @@ function apiBootstrap_(ctx) {
 
 function apiSaveObject_(ctx, d) {
   var rec = {
-    code: requireText_(d.code, 'Code'),
+    code: str_(d.code),
     name: requireText_(d.name, 'Name'),
     address: str_(d.address),
     kind_id: str_(d.kind_id),
@@ -94,12 +96,26 @@ function apiSaveObject_(ctx, d) {
     site_contact: str_(d.site_contact),
     note: str_(d.note)
   };
+  // The kind may be typed freely: an existing kind with that name is used, otherwise it is added.
+  if (d.kind_name !== undefined) {
+    var kindName = str_(d.kind_name);
+    rec.kind_id = '';
+    if (kindName) {
+      var kinds = t_('ObjectKinds').list(ctx.orgId, { includeArchived: true });
+      var found = kinds.filter(function (k) { return k.name.toLowerCase() === kindName.toLowerCase(); })[0];
+      if (found && found.archived_at) found = t_('ObjectKinds').restore(found.id, ctx.orgId, ctx.email);
+      if (!found) found = t_('ObjectKinds').insert(ctx.orgId, { name: kindName, sort: String((kinds.length + 1) * 10) }, ctx.email);
+      rec.kind_id = found.id;
+    }
+  }
   if (rec.kind_id) t_('ObjectKinds').require(rec.kind_id, ctx.orgId, 'Object kind');
   if (rec.responsible_user_id) t_('Users').require(rec.responsible_user_id, ctx.orgId, 'Responsible user');
-  var dup = t_('Objects').list(ctx.orgId).filter(function (o) {
-    return o.id !== d.id && o.code.toLowerCase() === rec.code.toLowerCase();
-  });
-  if (dup.length) throw appError_('INVALID', 'Another active object already has code ' + rec.code + '.');
+  if (rec.code) {
+    var dup = t_('Objects').list(ctx.orgId).filter(function (o) {
+      return o.id !== d.id && o.code.toLowerCase() === rec.code.toLowerCase();
+    });
+    if (dup.length) throw appError_('INVALID', 'Another active object already has code ' + rec.code + '.');
+  }
   if (d.id) return t_('Objects').update(d.id, ctx.orgId, rec, ctx.email, d.rev);
   return t_('Objects').insert(ctx.orgId, rec, ctx.email);
 }
@@ -278,8 +294,49 @@ function apiHistory_(ctx, d) {
     completions: completions,
     attachments: attachments,
     computed: computed,
-    snoozes: t_('Snoozes').list(ctx.orgId).filter(function (s) { return s.obligation_id === o.id; })
+    snoozes: t_('Snoozes').list(ctx.orgId).filter(function (s) { return s.obligation_id === o.id; }),
+    quotes: t_('QuoteRequests').list(ctx.orgId).filter(function (q) { return q.obligation_id === o.id; })
   };
+}
+
+// ------------------------------------------------------------------ quote requests
+
+/**
+ * Request for a quote to a contractor. The text is prepared and edited in the page.
+ * method 'send': sent by this deployment, reply-to and copy to the user's notification address.
+ * method 'self': sent to the user's own notification address, ready to forward to contractors.
+ * method 'draft': the user opened it in their own e-mail program; only recorded here.
+ */
+function apiRequestQuote_(ctx, d) {
+  var o = t_('Obligations').require(str_(d.obligation_id), ctx.orgId, 'Obligation');
+  var method = ['send', 'self', 'draft'].indexOf(d.method) >= 0 ? d.method : 'draft';
+  // 'self': ready-to-forward copy to the user's own notification address (e.g. work e-mail).
+  var to = method === 'self' ? [mailOf_(ctx.user)] : str_(d.to).toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  if (!to.length) throw appError_('INVALID', 'Recipient is required.');
+  to.forEach(function (e) { if (!EMAIL_RE.test(e)) throw appError_('INVALID', 'Recipient e-mail is not valid: ' + e); });
+  var subject = requireText_(d.subject, 'Subject');
+  var body = requireText_(d.body, 'Text');
+  if (method === 'send' || method === 'self') {
+    var me = mailOf_(ctx.user);
+    var settings = kvAll_('Settings', ctx.orgId);
+    var entry = { kind: 'Quote', period: ctx.today, recipient: to.join(','), ref_id: o.id, items: '1', sent_at: nowIso_() };
+    try {
+      var msg = { to: to.join(','), replyTo: me, subject: subject, body: body, name: settings.mail_sender_name || 'Servisi' };
+      if (method === 'send') msg.cc = me;
+      MailApp.sendEmail(msg);
+      entry.ok = 'true';
+      entry.error = '';
+    } catch (e) {
+      entry.ok = 'false';
+      entry.error = String(e.message || e);
+    }
+    t_('MailLog').insert(ctx.orgId, entry, ctx.email);
+    if (entry.ok !== 'true') throw appError_('MAIL', 'The e-mail could not be sent: ' + entry.error);
+  }
+  return t_('QuoteRequests').insert(ctx.orgId, {
+    obligation_id: o.id, contractor_id: o.contractor_id, recipient: to.join(', '), subject: subject, body: body,
+    method: method, sent_at: nowIso_()
+  }, ctx.email);
 }
 
 // ------------------------------------------------------------------ snoozes

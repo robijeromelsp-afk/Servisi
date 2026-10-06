@@ -414,9 +414,9 @@ test('Slovenian (default): e-mails and error messages', () => {
   assert.ok(b.state.mails.some((m) => /Rok 15\.01\.2027/.test(m.subject)), 'warning in Slovenian');
   // error messages follow the language of the request
   const raw = (lang) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({
-    action: 'saveObject', idToken: `fake:${OWNER}:${b.state.clientId}`, data: { code: '', name: 'X' }, lang }) } }).getContent());
-  assert.equal(raw('sl').error.message, 'Oznaka je obvezen podatek.');
-  assert.equal(raw('en').error.message, 'Code is required.');
+    action: 'saveObject', idToken: `fake:${OWNER}:${b.state.clientId}`, data: { code: 'X', name: '' }, lang }) } }).getContent());
+  assert.equal(raw('sl').error.message, 'Ime je obvezen podatek.');
+  assert.equal(raw('en').error.message, 'Name is required.');
   b.ok('saveSettings', OWNER, { values: { language: 'en' } });
   assert.equal(b.call('saveSettings', OWNER, { values: { language: 'de' } }).ok, false);
 });
@@ -448,4 +448,46 @@ test('schema migration: an older sheet gets new columns on the first request', (
   b.state.props.SCHEMA_VERSION = '1';
   assert.ok(b.ok('bootstrap', OWNER).me);
   assert.ok(sheet.cells[0].includes('notify_email'));
+});
+
+test('quote request: sent with reply-to and copy to the user, or recorded as draft; both in history', () => {
+  const b = setUp();
+  b.ok('saveUser', OWNER, { id: b.ok('bootstrap', OWNER).me.id, email: OWNER, role: 'Admin', notify_email: 'me@work.example' });
+  const obj = makeObject(b);
+  const o = makeObligation(b, obj.id, YEARLY);
+  b.state.mails = [];
+  b.ok('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'Contractor@Example.com', subject: 'Offer please', body: 'Text' });
+  assert.equal(b.state.mails.length, 1);
+  assert.equal(b.state.mails[0].to, 'contractor@example.com');
+  assert.equal(b.state.mails[0].replyTo, 'me@work.example');
+  assert.equal(b.state.mails[0].cc, 'me@work.example');
+  b.ok('requestQuote', OWNER, { obligation_id: o.id, method: 'draft', to: 'contractor@example.com', subject: 'S', body: 'B' });
+  assert.equal(b.state.mails.length, 1, 'draft is not sent by the app');
+  const h = b.ok('history', OWNER, { obligation_id: o.id });
+  assert.deepEqual(h.quotes.map((q) => q.method).sort().join(','), 'draft,send');
+  b.state.mails = [];
+  b.ok('requestQuote', OWNER, { obligation_id: o.id, method: 'self', to: 'ignored@example.com', subject: 'Fwd me', body: 'Clean text' });
+  assert.equal(b.state.mails.length, 1);
+  assert.equal(b.state.mails[0].to, 'me@work.example', 'sent to the work address for forwarding');
+  assert.equal(b.state.mails[0].body, 'Clean text', 'body is exactly the request, nothing added');
+  assert.equal(b.state.mails[0].cc, undefined);
+  assert.equal(b.call('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'bad', subject: 'S', body: 'B' }).ok, false);
+  b.state.failMailTo = 'x@example.com';
+  const r = b.call('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'x@example.com', subject: 'S', body: 'B' });
+  assert.equal(r.error.code, 'MAIL');
+  assert.equal(b.ok('history', OWNER, { obligation_id: o.id }).quotes.length, 3, 'failed send is not recorded as a request');
+});
+
+test('objects: code is optional; kind can be typed and is added once', () => {
+  const b = setUp();
+  const a = b.ok('saveObject', OWNER, { name: 'Toplarna', kind_name: 'Toplarna' });
+  assert.equal(a.code, '');
+  const b2 = b.ok('saveObject', OWNER, { name: 'Toplarna 2', kind_name: 'toplarna' });
+  assert.equal(b2.kind_id, a.kind_id, 'same kind reused, case-insensitive');
+  const boot = b.ok('bootstrap', OWNER);
+  assert.equal(boot.objectKinds.filter((k) => k.name.toLowerCase() === 'toplarna').length, 1);
+  b.ok('saveObject', OWNER, { name: 'Brez oznake' }); // two objects without code are fine
+  const c = b.ok('saveObject', OWNER, { id: a.id, rev: a.rev, name: 'Toplarna', kind_name: '' });
+  assert.equal(c.kind_id, '');
+  assert.equal(b.call('saveObject', OWNER, { name: '' }).ok, false);
 });

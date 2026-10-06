@@ -103,6 +103,9 @@ const SL = {
   'No obligations yet.': 'Še ni obveznosti.',
   'Archived obligations ({n})': 'Arhivirane obveznosti ({n})',
   'Code': 'Oznaka',
+  'Code (optional)': 'Oznaka (neobvezno)',
+  'Short label, e.g. K12. Leave empty if it is the same as the name.': 'Kratka oznaka, npr. K12. Pustite prazno, če je enaka imenu.',
+  'Choose from the list or type your own; a new kind is added to the list.': 'Izberite s seznama ali vpišite svojo; nova vrsta se doda na seznam.',
   'Short label, e.g. K12. Must be unique.': 'Kratka oznaka, npr. K12. Mora biti enolična.',
   'Responsible user': 'Odgovorna oseba',
   '— (e-mails go to administrators)': '— (pošta gre skrbnikom)',
@@ -315,6 +318,40 @@ const SL = {
     'ter seznam prilog s povezavami na Drive. Hranite jo kot varnostno kopijo ali za selitev na drugo postavitev.',
   'Imports data.json from an export into this organisation. Only possible while it has no objects and no obligations.':
     'Uvozi data.json iz izvoza v to organizacijo. Mogoče samo, dokler nima objektov in obveznosti.',
+
+  // quote requests
+  'Request quote': 'Povpraši za ponudbo',
+  'Request for quote: {type} – {object}': 'Povpraševanje za ponudbo: {type} – {object}',
+  'Dear Sir or Madam,\n\nwe kindly ask for a quote for: {type}\nObject: {object}\nAddress: {address}\nDue date: {due}\nSite contact: {site_contact}\nNote: {note}\n\nPlease include the price and the earliest possible date of execution.\n\nKind regards,\n{sender}':
+    'Spoštovani,\n\nprosimo za ponudbo za: {type}\nObjekt: {object}\nNaslov: {address}\nRok: {due}\nKontakt na objektu: {site_contact}\nOpomba: {note}\n\nProsimo, da v ponudbi navedete ceno in najzgodnejši možni termin izvedbe.\n\nLep pozdrav,\n{sender}',
+  'No contractor is set for this obligation. Enter the e-mail address.': 'Pri tej obveznosti ni izvajalca. Vpišite e-naslov.',
+  'Several addresses separated by commas.': 'Več naslovov ločite z vejico.',
+  'Subject': 'Zadeva',
+  'Text': 'Besedilo',
+  'Send: the application sends it; replies and a copy go to your e-mail for notifications. Open as draft: your own e-mail program opens and you send it yourself.':
+    'Pošlji: sporočilo pošlje aplikacija; odgovori in kopija gredo na vaš e-naslov za obvestila. Odpri kot osnutek: odpre se vaš poštni program in sporočilo pošljete sami.',
+  'Send': 'Pošlji',
+  'Send to me for forwarding': 'Pošlji meni za posredovanje',
+  'Send to contractor': 'Pošlji izvajalcu',
+  'Open as draft: your own e-mail program opens with the request; you send it from your own address.':
+    'Odpri kot osnutek: odpre se vaš poštni program s pripravljenim povpraševanjem; pošljete ga s svojega naslova.',
+  'Send to me for forwarding: the request arrives at {e}; forward it to contractors from there.':
+    'Pošlji meni za posredovanje: povpraševanje pride na {e}; od tam ga posredujete izvajalcem.',
+  'Send to contractor: the application sends it; replies and a copy go to {e}.':
+    'Pošlji izvajalcu: pošlje ga aplikacija; odgovori in kopija gredo na {e}.',
+  'Sent to {e} for forwarding.': 'Poslano na {e} za posredovanje.',
+  'Quote request sent to me for forwarding {d}': 'Povpraševanje poslano meni za posredovanje {d}',
+  'Open as draft': 'Odpri kot osnutek',
+  'Quote request sent.': 'Povpraševanje je poslano.',
+  'Draft opened and recorded in the history.': 'Osnutek je odprt in zapisan v zgodovino.',
+  'Quote requested {d}': 'Povpraševanje poslano {d}',
+  'Quote request drafted {d}': 'Povpraševanje pripravljeno kot osnutek {d}',
+  'to {r} · by {u}': 'prejemnik {r} · {u}',
+  'Quote': 'Ponudba',
+  'Quote request – subject': 'Povpraševanje – zadeva',
+  'Quote request – text': 'Povpraševanje – besedilo',
+  'Empty = default text. Placeholders: {type} {object} {address} {due} {site_contact} {note} {contractor} {sender}. A line whose placeholders are empty is left out.':
+    'Prazno = privzeto besedilo. Oznake: {type} {object} {address} {due} {site_contact} {note} {contractor} {sender}. Vrstica s praznimi oznakami se izpusti.',
 
   // api errors raised in the browser
   'The server did not answer in time. Check the connection and try again.': 'Strežnik ni odgovoril pravočasno. Preverite povezavo in poskusite znova.',

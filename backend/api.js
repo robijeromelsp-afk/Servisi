@@ -24,6 +24,7 @@ function actions_() {
   markDone: [apiMarkDone_, 'User', true],
   voidCompletion: [apiVoidCompletion_, 'User', true],
   snooze: [apiSnooze_, 'User', true],
+  requestQuote: [apiRequestQuote_, 'User', true],
   cancelSnooze: [apiCancelSnooze_, 'User', true],
   saveCatalog: [apiSaveCatalog_, 'User', true],
   archiveCatalog: [apiArchiveCatalog_, 'User', true],

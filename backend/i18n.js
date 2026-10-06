@@ -13,7 +13,8 @@ var ERROR_LABELS_SL = {
   'Weekday': 'Dan v tednu', 'Interval': 'Interval', 'Day of month': 'Dan v mesecu', 'Month': 'Mesec',
   'Warning days': 'Število dni opozorila', 'Days': 'Število dni', 'Sort': 'Vrstni red',
   'Day of the monthly e-mail': 'Dan mesečne pošte', 'Hour': 'Ura', 'Start date': 'Začetni datum',
-  'Last done date': 'Datum zadnje izvedbe', 'Reminder date': 'Datum opomnika'
+  'Last done date': 'Datum zadnje izvedbe', 'Reminder date': 'Datum opomnika',
+  'Subject': 'Zadeva', 'Text': 'Besedilo'
 };
 
 var ERRORS_SL = {
@@ -77,6 +78,7 @@ var ERROR_PATTERNS_SL = [
   [/^Recipient e-mail is not valid: (.+)$/, function (m) { return 'E-naslov prejemnika ni veljaven: ' + m[1]; }],
   [/^The due date changed in the meantime \(now (.*)\)\. Reload and try again\.$/,
     function (m) { return 'Rok se je medtem spremenil (zdaj ' + m[1] + '). Osvežite in poskusite znova.'; }],
+  [/^The e-mail could not be sent: (.*)$/, function (m) { return 'Sporočila ni bilo mogoče poslati: ' + m[1]; }],
   [/^Unknown action: (.*)$/, function (m) { return 'Neznano dejanje: ' + m[1]; }],
   [/^Unexpected server error: (.*)$/, function (m) { return 'Nepričakovana napaka strežnika: ' + m[1]; }]
 ];

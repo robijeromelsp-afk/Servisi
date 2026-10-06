@@ -113,8 +113,14 @@ function lineParts_(data, o) {
   };
 }
 
+/** "K12 - Name", or only the name when there is no code or it equals the name. */
+function objectLabel_(obj) {
+  var code = String(obj.code || '').trim();
+  return code && code.toLowerCase() !== String(obj.name || '').trim().toLowerCase() ? code + ' - ' + obj.name : obj.name;
+}
+
 function objectTitle_(obj) {
-  return obj.code + ' - ' + obj.name + (obj.address ? ', ' + obj.address : '');
+  return objectLabel_(obj) + (obj.address ? ', ' + obj.address : '');
 }
 
 /**
@@ -144,7 +150,7 @@ function monthlyMessage_(ctx, data, items, period, external, weekly) {
     var byObject = {};
     inSec.forEach(function (it) { (byObject[it.o.object_id] = byObject[it.o.object_id] || []).push(it.o); });
     Object.keys(byObject).sort(function (a, b) {
-      return data.objects[a].code.localeCompare(data.objects[b].code);
+      return objectLabel_(data.objects[a]).localeCompare(objectLabel_(data.objects[b]));
     }).forEach(function (objId) {
       var obj = data.objects[objId];
       html.push('<p style="margin:10px 0 2px;font-weight:bold">' + esc_(objectTitle_(obj)) + '</p><ul style="margin:0;padding-left:20px">');
@@ -188,5 +194,5 @@ function singleMessage_(ctx, data, o, title, sentence, external) {
   var text = title + '\n\n' + p.type + ' ' + at + ' ' + objectTitle_(obj) + ': ' + sentence + '\n' +
     (p.contractor ? tr_(settings, 'contractor') + ': ' + p.contractor + '\n' : '') + (link ? link + '\n' : '') +
     '\n' + tr_(settings, 'disclaimer');
-  return { subject: 'Servisi: ' + title + ' - ' + p.type + ' - ' + obj.code, html: html, text: text };
+  return { subject: 'Servisi: ' + title + ' - ' + p.type + ' - ' + objectLabel_(obj), html: html, text: text };
 }

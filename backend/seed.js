@@ -5,7 +5,8 @@
  */
 
 // Names as given by the first users (data, not interface text; editable in Settings).
-var SEED_OBJECT_KINDS = ['Kotlovnica', 'Stavba'];
+var SEED_OBJECT_KINDS = ['Kotlovnica', 'Toplarna', 'Toplotna podpostaja', 'Stanovanjska stavba',
+  'Poslovna stavba', 'Javni objekt', 'Industrijski objekt', 'Drugo'];
 
 var SEED_GROUPS = [
   ['Kurilne naprave', ['Dimnikarski pregled', 'Čiščenje', 'Meritve emisij', 'Servis kotla', 'Plinska napeljava']],

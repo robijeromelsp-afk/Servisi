@@ -51,7 +51,7 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.fill('input[name=code]', 'K1');
   await page.fill('input[name=name]', 'Boiler room 1');
   await page.fill('input[name=address]', 'Main street 1');
-  await page.selectOption('select[name=kind_id]', { index: 1 });
+  await page.fill('input[name=kind_name]', 'Kotlovnica');
   await page.selectOption('select[name=responsible_user_id]', { index: 1 });
   await page.click('button:has-text("Save")');
   await page.waitForSelector('h1:has-text("K1 – Boiler room 1")');
@@ -133,6 +133,21 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.click('dialog button:has-text("Set reminder")');
   await page.waitForSelector('text=Cancel reminder');
 
+  step('request a quote from the contractor');
+  await page.click('button:has-text("Request quote")');
+  const subj = await page.inputValue('dialog input[name=subject]');
+  assert.match(subj, /^Request for quote: .+ – K1 – Boiler room 1$/);
+  assert.match(await page.inputValue('dialog textarea[name=body]'), /Address: Main street 1/);
+  assert.doesNotMatch(await page.inputValue('dialog textarea[name=body]'), /\{note\}|Site contact:/, 'empty lines left out');
+  await page.fill('dialog input[name=to]', 'contractor@example.com');
+  await page.click('dialog button:has-text("Send to contractor")');
+  await page.waitForSelector('text=Quote requested');
+  await page.click('button:has-text("Request quote")');
+  await page.click('dialog button:has-text("Send to me for forwarding")');
+  await page.waitForSelector('text=Quote request sent to me for forwarding');
+  const sent = await (await page.request.get(BASE + '/__dev/mails')).json();
+  assert.ok(sent.some((m) => m.to === 'contractor@example.com' && m.subject === subj && m.replyTo === 'owner@example.com'));
+
   step('void completion restores the due date');
   page.once('dialog', () => {});
   await page.click('button.link:has-text("Void")');
@@ -194,6 +209,17 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.click('.item:has-text("K1")');
   await page.waitForSelector('button:has-text("Obnovi")');
   await shot('09-slovenian');
+  // lists must keep working in Slovenian (their technical names must not be translated)
+  await page.goto(BASE + '/#/settings/contractors');
+  await page.click('main button.primary');
+  await page.fill('dialog input[name=name]', 'Izvajalec SL');
+  await page.click('dialog button.primary');
+  await page.waitForSelector('.item:has-text("Izvajalec SL")');
+  await page.goto(BASE + '/#/settings/kinds');
+  await page.click('main button.primary');
+  await page.fill('dialog input[name=name]', 'Vrsta SL');
+  await page.click('dialog button.primary');
+  await page.waitForSelector('.item:has-text("Vrsta SL")');
 
   assert.deepEqual(errors, [], 'no browser errors');
   console.log('E2E OK');

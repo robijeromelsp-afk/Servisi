@@ -32,6 +32,7 @@ var SCHEMA = {
     'size_bytes', 'original_size_bytes', 'kind'],
   Snoozes: ['obligation_id', 'remind_on', 'note', 'sent_at', 'cancelled_at', 'cancelled_by'],
   StorageClients: ['email', 'org_label'],
+  QuoteRequests: ['obligation_id', 'contractor_id', 'recipient', 'subject', 'body', 'method', 'sent_at'],
   MailLog: ['kind', 'period', 'recipient', 'ref_id', 'items', 'sent_at', 'ok', 'error'],
   AuditLog: ['entity', 'entity_id', 'action', 'by', 'at', 'before_json', 'after_json'],
   Status: ['key', 'value']
@@ -41,7 +42,7 @@ var SCHEMA = {
 var UNAUDITED = { AuditLog: true, MailLog: true, Status: true };
 
 /** Raise when SCHEMA changes; the first request after a deployment then adds the new columns. */
-var SCHEMA_VERSION = '2';
+var SCHEMA_VERSION = '3';
 
 var DB_CACHE_ = null;
 

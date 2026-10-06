@@ -133,6 +133,18 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.click('dialog button:has-text("Set reminder")');
   await page.waitForSelector('text=Cancel reminder');
 
+  step('request a quote from the contractor');
+  await page.click('button:has-text("Request quote")');
+  const subj = await page.inputValue('dialog input[name=subject]');
+  assert.match(subj, /^Request for quote: .+ – K1 – Boiler room 1$/);
+  assert.match(await page.inputValue('dialog textarea[name=body]'), /Address: Main street 1/);
+  assert.doesNotMatch(await page.inputValue('dialog textarea[name=body]'), /\{note\}|Site contact:/, 'empty lines left out');
+  await page.fill('dialog input[name=to]', 'contractor@example.com');
+  await page.click('dialog button:has-text("Send")');
+  await page.waitForSelector('text=Quote requested');
+  const sent = await (await page.request.get(BASE + '/__dev/mails')).json();
+  assert.ok(sent.some((m) => m.to === 'contractor@example.com' && m.subject === subj && m.replyTo === 'owner@example.com'));
+
   step('void completion restores the due date');
   page.once('dialog', () => {});
   await page.click('button.link:has-text("Void")');

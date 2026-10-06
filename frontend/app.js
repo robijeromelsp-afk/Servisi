@@ -425,6 +425,7 @@ async function viewObligation(id) {
     o.archived_at ? h('div', { class: 'actions' }, archiveBtn) : h('div', { class: 'actions' },
       o.status === 'Active' ? h('a', { class: 'btn primary', href: `#/obligation/${id}/done` }, t('Mark done')) : null,
       h('button', { onclick: () => remindMe(o) }, t('Remind me')),
+      h('button', { onclick: () => requestQuote(o) }, t('Request quote')),
       h('a', { class: 'btn', href: `#/obligation/${id}/edit` }, t('Edit')), archiveBtn),
     h('h2', {}, t('History')), h('div', { class: 'card' }, historyEl), footer());
   const hist = await api.call('history', { obligation_id: id });
@@ -439,9 +440,18 @@ function renderHistory(el, hist) {
   const rows = [];
   hist.completions.forEach((c) => rows.push({ date: c.done_date, c }));
   hist.computed.history.filter((x) => x.kind === 'skipped').forEach((s) => rows.push({ date: s.due, skipped: s }));
+  (hist.quotes || []).forEach((q) => rows.push({ date: q.sent_at.slice(0, 10), quote: q }));
   rows.sort((a, b) => b.date.localeCompare(a.date));
   if (!rows.length) return mount(el, h('p', { class: 'muted' }, t('Not done yet in this application.')));
   mount(el, h('div', { class: 'list' }, rows.map((r) => {
+    if (r.quote) {
+      const q = r.quote;
+      return h('div', { class: 'item' }, h('div', { class: 'grow' },
+        h('div', { class: 'title' }, t(q.method === 'send' ? 'Quote requested {d}' : 'Quote request drafted {d}', { d: fmtDateTime(q.sent_at) })),
+        h('div', { class: 'sub' }, t('to {r} · by {u}', { r: q.recipient, u: q.created_by })),
+        h('details', {}, h('summary', { class: 'small' }, q.subject), h('pre', { class: 'small', style: 'white-space:pre-wrap' }, q.body))),
+      h('span', { class: 'chip' }, t('Quote')));
+    }
     if (r.skipped) {
       return h('div', { class: 'item' }, h('div', { class: 'grow' }, h('div', { class: 'title' }, t('Skipped due date {d}', { d: fmtDate(r.skipped.due) })),
         h('div', { class: 'sub' }, t('Passed over because the previous due date was done late (calendar counting).'))),
@@ -470,6 +480,55 @@ function renderHistory(el, hist) {
         `${t(a.kind)}: ${a.file_name}`), a.size_bytes ? ` (${fmtBytes(+a.size_bytes)})` : ''))),
     h('div', {}, c.void_at ? h('span', { class: 'chip' }, t('Voided')) : [comp?.late ? h('span', { class: 'chip overdue' }, t('Late')) : h('span', { class: 'chip ok' }, t('On time')), ' ', voidBtn]));
   })));
+}
+
+const QUOTE_SUBJECT = 'Request for quote: {type} – {object}';
+const QUOTE_BODY = 'Dear Sir or Madam,\n\nwe kindly ask for a quote for: {type}\nObject: {object}\nAddress: {address}\n' +
+  'Due date: {due}\nSite contact: {site_contact}\nNote: {note}\n\n' +
+  'Please include the price and the earliest possible date of execution.\n\nKind regards,\n{sender}';
+
+/** Fills {placeholders}; a line whose placeholders are all empty is left out. */
+function fillTemplate(text, vals) {
+  return text.split('\n').filter((line) => {
+    const keys = [...line.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+    return !keys.length || keys.some((k) => vals[k]);
+  }).map((line) => line.replace(/\{(\w+)\}/g, (m, k) => (k in vals ? vals[k] : m))).join('\n');
+}
+
+async function requestQuote(o) {
+  const obj = objectOf(o);
+  const c = contractorOf(o);
+  const vals = {
+    type: typeName(o.type_id), object: obj ? `${obj.code} – ${obj.name}` : '', address: obj?.address || '',
+    due: o.next_due ? fmtDate(o.next_due) : '', site_contact: obj?.site_contact || '', note: o.note || '',
+    contractor: c?.name || '', sender: state.me.display_name || state.me.email
+  };
+  const subject = fillTemplate(state.settings.quote_subject || t(QUOTE_SUBJECT), vals);
+  const body = fillTemplate(state.settings.quote_body || t(QUOTE_BODY), vals);
+  const res = await modal((close) => {
+    const to = h('input', { type: 'text', name: 'to', value: c?.email || '', placeholder: 'name@example.com' });
+    const subj = h('input', { type: 'text', name: 'subject', value: subject });
+    const text = h('textarea', { name: 'body', style: 'min-height:260px' }, body);
+    const read = (method) => ({ method, to: to.value.trim(), subject: subj.value.trim(), body: text.value });
+    return h('form', { onsubmit: (e) => { e.preventDefault(); close(read('send')); } },
+      h('h2', {}, t('Request quote')),
+      c ? null : h('p', { class: 'notice' }, t('No contractor is set for this obligation. Enter the e-mail address.')),
+      field(t('To'), to, t('Several addresses separated by commas.')), field(t('Subject'), subj), field(t('Text'), text),
+      h('p', { class: 'hint' }, t('Send: the application sends it; replies and a copy go to your e-mail for notifications. Open as draft: your own e-mail program opens and you send it yourself.')),
+      h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, t('Send')),
+        h('button', { type: 'button', onclick: () => close(read('draft')) }, t('Open as draft')),
+        h('button', { type: 'button', onclick: () => close(null) }, t('Cancel'))));
+  });
+  if (!res) return;
+  try {
+    if (res.method === 'draft') {
+      location.href = `mailto:${encodeURIComponent(res.to).replace(/%2C/g, ',').replace(/%40/g, '@')}` +
+        `?subject=${encodeURIComponent(res.subject)}&body=${encodeURIComponent(res.body)}`;
+    }
+    await api.call('requestQuote', { obligation_id: o.id, ...res });
+    toast(res.method === 'send' ? t('Quote request sent.') : t('Draft opened and recorded in the history.'));
+    route();
+  } catch (err) { toast(err.message); }
 }
 
 async function remindMe(o) {
@@ -723,6 +782,9 @@ function settingsGeneral(el) {
       t('Weekly reminder on Mondays when something is overdue')),
     field(t('Language of the application and the e-mails'), select('language', LANGUAGES, s.language || 'sl')),
     field(t('Sender name'), h('input', { type: 'text', name: 'mail_sender_name', value: s.mail_sender_name || '' })),
+    field(t('Quote request – subject'), h('input', { type: 'text', name: 'quote_subject', value: s.quote_subject || '', placeholder: t(QUOTE_SUBJECT) })),
+    field(t('Quote request – text'), h('textarea', { name: 'quote_body', style: 'min-height:200px', placeholder: t(QUOTE_BODY) }, s.quote_body || ''),
+      t('Empty = default text. Placeholders: {type} {object} {address} {due} {site_contact} {note} {contractor} {sender}. A line whose placeholders are empty is left out.')),
     field(t('Application link (used in e-mails)'), h('input', { type: 'url', name: 'app_url', value: s.app_url || '' })),
     field(t('Attachment storage of another deployment'), h('input', { type: 'url', name: 'storage_url', value: s.storage_url || '' }),
       t('Empty = attachments are stored by this deployment.')),

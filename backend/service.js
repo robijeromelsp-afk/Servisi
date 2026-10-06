@@ -4,7 +4,8 @@
 
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 var CATALOGS = { ObjectKinds: 'Admin', ObligationGroups: 'Admin', ObligationTypes: 'Admin', Contractors: 'User' };
-var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name', 'language'];
+var SETTING_KEYS = ['monthly_day', 'run_hour', 'weekly_overdue_reminder', 'app_url', 'storage_url', 'mail_sender_name', 'language',
+  'quote_subject', 'quote_body'];
 
 function t_(name) {
   return db_().table(name);
@@ -278,8 +279,46 @@ function apiHistory_(ctx, d) {
     completions: completions,
     attachments: attachments,
     computed: computed,
-    snoozes: t_('Snoozes').list(ctx.orgId).filter(function (s) { return s.obligation_id === o.id; })
+    snoozes: t_('Snoozes').list(ctx.orgId).filter(function (s) { return s.obligation_id === o.id; }),
+    quotes: t_('QuoteRequests').list(ctx.orgId).filter(function (q) { return q.obligation_id === o.id; })
   };
+}
+
+// ------------------------------------------------------------------ quote requests
+
+/**
+ * Request for a quote to a contractor. The text is prepared and edited in the page.
+ * method 'send': sent by this deployment, reply-to and copy to the user's notification address.
+ * method 'draft': the user opened it in their own e-mail program; only recorded here.
+ */
+function apiRequestQuote_(ctx, d) {
+  var o = t_('Obligations').require(str_(d.obligation_id), ctx.orgId, 'Obligation');
+  var method = d.method === 'send' ? 'send' : 'draft';
+  var to = str_(d.to).toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  if (!to.length) throw appError_('INVALID', 'Recipient is required.');
+  to.forEach(function (e) { if (!EMAIL_RE.test(e)) throw appError_('INVALID', 'Recipient e-mail is not valid: ' + e); });
+  var subject = requireText_(d.subject, 'Subject');
+  var body = requireText_(d.body, 'Text');
+  if (method === 'send') {
+    var me = mailOf_(ctx.user);
+    var settings = kvAll_('Settings', ctx.orgId);
+    var entry = { kind: 'Quote', period: ctx.today, recipient: to.join(','), ref_id: o.id, items: '1', sent_at: nowIso_() };
+    try {
+      MailApp.sendEmail({ to: to.join(','), cc: me, replyTo: me, subject: subject, body: body,
+        name: settings.mail_sender_name || 'Servisi' });
+      entry.ok = 'true';
+      entry.error = '';
+    } catch (e) {
+      entry.ok = 'false';
+      entry.error = String(e.message || e);
+    }
+    t_('MailLog').insert(ctx.orgId, entry, ctx.email);
+    if (entry.ok !== 'true') throw appError_('MAIL', 'The e-mail could not be sent: ' + entry.error);
+  }
+  return t_('QuoteRequests').insert(ctx.orgId, {
+    obligation_id: o.id, contractor_id: o.contractor_id, recipient: to.join(', '), subject: subject, body: body,
+    method: method, sent_at: nowIso_()
+  }, ctx.email);
 }
 
 // ------------------------------------------------------------------ snoozes

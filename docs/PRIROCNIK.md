@@ -21,6 +21,9 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: **povpraševanje za ponudbo** pri obveznosti – »Pošlji« (aplikacija pošlje, odgovor in kopija na
+  uporabnikov e-naslov za obvestila) ali »Odpri kot osnutek« (mailto, uporabnik pošlje sam). Oboje v zgodovini
+  (list QuoteRequests). Predloga v nastavitvah (quote_subject, quote_body; prazno = privzeto v jeziku organizacije).
 - 6. 10. 2026: pošiljatelj ostane Google račun postavitve (pot B; ime pošiljatelja »Servisi«). Pot A
   (servisi@dolb.si prek storitve za pošiljanje, npr. Brevo) je odložena – za kasneje.
 - 6. 10. 2026 – **POSTOPEK OBJAVE:** ko Robi napiše »objavi«, Claude sam združi PR v `main` (Cloudflare objavi

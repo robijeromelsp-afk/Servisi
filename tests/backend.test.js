@@ -449,3 +449,25 @@ test('schema migration: an older sheet gets new columns on the first request', (
   assert.ok(b.ok('bootstrap', OWNER).me);
   assert.ok(sheet.cells[0].includes('notify_email'));
 });
+
+test('quote request: sent with reply-to and copy to the user, or recorded as draft; both in history', () => {
+  const b = setUp();
+  b.ok('saveUser', OWNER, { id: b.ok('bootstrap', OWNER).me.id, email: OWNER, role: 'Admin', notify_email: 'me@work.example' });
+  const obj = makeObject(b);
+  const o = makeObligation(b, obj.id, YEARLY);
+  b.state.mails = [];
+  b.ok('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'Contractor@Example.com', subject: 'Offer please', body: 'Text' });
+  assert.equal(b.state.mails.length, 1);
+  assert.equal(b.state.mails[0].to, 'contractor@example.com');
+  assert.equal(b.state.mails[0].replyTo, 'me@work.example');
+  assert.equal(b.state.mails[0].cc, 'me@work.example');
+  b.ok('requestQuote', OWNER, { obligation_id: o.id, method: 'draft', to: 'contractor@example.com', subject: 'S', body: 'B' });
+  assert.equal(b.state.mails.length, 1, 'draft is not sent by the app');
+  const h = b.ok('history', OWNER, { obligation_id: o.id });
+  assert.deepEqual(h.quotes.map((q) => q.method).sort().join(','), 'draft,send');
+  assert.equal(b.call('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'bad', subject: 'S', body: 'B' }).ok, false);
+  b.state.failMailTo = 'x@example.com';
+  const r = b.call('requestQuote', OWNER, { obligation_id: o.id, method: 'send', to: 'x@example.com', subject: 'S', body: 'B' });
+  assert.equal(r.error.code, 'MAIL');
+  assert.equal(b.ok('history', OWNER, { obligation_id: o.id }).quotes.length, 2, 'failed send is not recorded as a request');
+});

@@ -41,8 +41,15 @@ function replaceIn(list, rec) {
   if (i >= 0) list[i] = rec; else list.push(rec);
 }
 
+/** Object label: "K12 – Name", or only the name when there is no code or it equals the name. */
+function objLabel(obj) {
+  if (!obj) return '';
+  const code = (obj.code || '').trim();
+  return code && code.toLowerCase() !== (obj.name || '').trim().toLowerCase() ? `${code} – ${obj.name}` : obj.name;
+}
+
 function sortByCode(a, b) {
-  return a.code.localeCompare(b.code, undefined, { numeric: true });
+  return objLabel(a).localeCompare(objLabel(b), undefined, { numeric: true });
 }
 
 // ------------------------------------------------------------------ start
@@ -219,7 +226,7 @@ function obligationRow(o, showObject) {
   return h('a', { class: 'item', href: `#/obligation/${o.id}` },
     h('div', { class: 'grow' },
       h('div', { class: 'title' }, typeName(o.type_id)),
-      showObject && obj ? h('div', { class: 'sub' }, `${obj.code} – ${obj.name}`) : null,
+      showObject && obj ? h('div', { class: 'sub' }, objLabel(obj)) : null,
       h('div', { class: 'sub' }, S.describe(ruleOf(o), getLang()), c ? ` · ${c.name}` : '', sn ? ' · ' + t('reminder {d}', { d: fmtDate(sn.remind_on) }) : '')),
     h('div', { class: 'center' },
       h('div', { class: 'due' }, o.next_due ? fmtDate(o.next_due) : '—'),
@@ -230,7 +237,7 @@ function groupedByObject(list) {
   const groups = {};
   list.forEach((o) => { (groups[o.object_id] = groups[o.object_id] || []).push(o); });
   return Object.keys(groups).map((id) => byId(state.objects, id)).filter(Boolean).sort(sortByCode).map((obj) =>
-    h('div', {}, h('div', { class: 'group-title' }, h('a', { href: `#/object/${obj.id}` }, `${obj.code} – ${obj.name}`),
+    h('div', {}, h('div', { class: 'group-title' }, h('a', { href: `#/object/${obj.id}` }, objLabel(obj)),
       obj.address ? h('span', { class: 'muted small' }, ` · ${obj.address}`) : null),
     h('div', { class: 'list' }, groups[obj.id].sort((a, b) => (a.next_due || '').localeCompare(b.next_due || '')).map((o) => obligationRow(o, false)))));
 }
@@ -258,9 +265,9 @@ async function viewOverview() {
       mount(body,
         buckets.attention.length ? [h('h3', {}, t('Incomplete repeat settings (no due date)')), groupedByObject(buckets.attention)] : null,
         noObligations.length ? [h('h3', {}, t('Objects without obligations')), h('div', { class: 'list' }, noObligations.sort(sortByCode).map((obj) =>
-          h('a', { class: 'item', href: `#/object/${obj.id}` }, `${obj.code} – ${obj.name}`)))] : null,
+          h('a', { class: 'item', href: `#/object/${obj.id}` }, objLabel(obj))))] : null,
         noResponsible.length ? [h('h3', {}, t('Objects without a responsible user (e-mails go to administrators)')), h('div', { class: 'list' }, noResponsible.sort(sortByCode).map((obj) =>
-          h('a', { class: 'item', href: `#/object/${obj.id}` }, `${obj.code} – ${obj.name}`)))] : null,
+          h('a', { class: 'item', href: `#/object/${obj.id}` }, objLabel(obj))))] : null,
         attentionCount ? null : h('p', { class: 'muted' }, t('Nothing needs attention.')));
     } else {
       const list = buckets[overviewTab];
@@ -290,7 +297,7 @@ async function viewObjects() {
       const obls = active(state.obligations).filter((o) => o.object_id === obj.id);
       const overdue = obls.filter((o) => classOf(o) === 'overdue').length;
       return h('a', { class: 'item', href: `#/object/${obj.id}` },
-        h('div', { class: 'grow' }, h('div', { class: 'title' }, `${obj.code} – ${obj.name}`),
+        h('div', { class: 'grow' }, h('div', { class: 'title' }, objLabel(obj)),
           h('div', { class: 'sub' }, [obj.address, byId(state.objectKinds, obj.kind_id)?.name, userName(obj.responsible_user_id)].filter(Boolean).join(' · '))),
         h('div', {}, obj.archived_at ? h('span', { class: 'chip' }, t('Archived')) : null,
           overdue ? h('span', { class: 'chip overdue' }, t('{n} overdue', { n: overdue })) : h('span', { class: 'chip' }, t('{n} obligations', { n: obls.length }))));
@@ -319,7 +326,7 @@ async function viewObject(id) {
     if (obj.archived_at) {
       await api.call('restoreObject', { id, rev: obj.rev });
     } else {
-      const reason = await askReason(t('Archive {c}?', { c: obj.code }), t('Reason (its {n} obligations are archived with it)', { n: live.length }));
+      const reason = await askReason(t('Archive {c}?', { c: objLabel(obj) }), t('Reason (its {n} obligations are archived with it)', { n: live.length }));
       if (!reason) return;
       await api.call('archiveObject', { id, reason, rev: obj.rev });
     }
@@ -328,7 +335,7 @@ async function viewObject(id) {
   });
   mount(app,
     h('p', {}, h('a', { href: '#/objects' }, t('← Objects'))),
-    h('h1', {}, `${obj.code} – ${obj.name}`),
+    h('h1', {}, objLabel(obj)),
     obj.archived_at ? h('p', { class: 'notice' }, t('Archived {d}: {r}', { d: fmtDateTime(obj.archived_at), r: obj.archive_reason })) : null,
     h('div', { class: 'card' }, h('dl', { class: 'kv' },
       h('dt', {}, t('Address')), h('dd', {}, obj.address || '—'),
@@ -354,10 +361,12 @@ async function viewObjectForm(id) {
   if (id && !obj) throw new Error(t('Object not found.'));
   const users = active(state.users).filter((u) => u.active === 'true');
   const form = h('form', {},
-    field(t('Code'), h('input', { type: 'text', name: 'code', required: true, value: obj.code || '' }), t('Short label, e.g. K12. Must be unique.')),
     field(t('Name'), h('input', { type: 'text', name: 'name', required: true, value: obj.name || '' })),
+    field(t('Code (optional)'), h('input', { type: 'text', name: 'code', value: obj.code || '' }), t('Short label, e.g. K12. Leave empty if it is the same as the name.')),
     field(t('Address'), h('input', { type: 'text', name: 'address', value: obj.address || '' })),
-    field(t('Kind'), select('kind_id', [{ value: '', label: '—' }, ...active(state.objectKinds).map((k) => ({ value: k.id, label: k.name }))], obj.kind_id)),
+    field(t('Kind'), h('input', { type: 'text', name: 'kind_name', list: 'object-kinds', autocomplete: 'off',
+      value: byId(state.objectKinds, obj.kind_id)?.name || '' }), t('Choose from the list or type your own; a new kind is added to the list.')),
+    h('datalist', { id: 'object-kinds' }, active(state.objectKinds).map((k) => h('option', { value: k.name }))),
     field(t('Responsible user'), select('responsible_user_id', [{ value: '', label: t('— (e-mails go to administrators)') },
       ...users.map((u) => ({ value: u.id, label: u.display_name || u.email }))], obj.responsible_user_id),
     t('Receives the monthly e-mail for this object.')),
@@ -371,11 +380,12 @@ async function viewObjectForm(id) {
     try {
       const saved = await api.call('saveObject', { ...formData(form), id: id || undefined, rev: obj.rev });
       replaceIn(state.objects, saved);
+      if (saved.kind_id && !byId(state.objectKinds, saved.kind_id)) await reload();
       toast(t('Saved.'));
       go(`/object/${saved.id}`);
     } catch (err) { toast(err.message); }
   });
-  mount(app, h('h1', {}, id ? t('Edit {c}', { c: obj.code }) : t('Add object')), h('div', { class: 'card' }, form));
+  mount(app, h('h1', {}, id ? t('Edit {c}', { c: objLabel(obj) }) : t('Add object')), h('div', { class: 'card' }, form));
 }
 
 // ------------------------------------------------------------------ obligation
@@ -404,7 +414,7 @@ async function viewObligation(id) {
   const recipients = JSON.parse(o.extra_recipients || '[]').map((r) => (r.userId ? userName(r.userId) : r.email));
   const upcoming = o.next_due ? S.upcoming(ruleOf(o), o.next_due, 5) : [];
   mount(app,
-    h('p', {}, h('a', { href: `#/object/${o.object_id}` }, `← ${obj ? obj.code + ' – ' + obj.name : t('Object')}`)),
+    h('p', {}, h('a', { href: `#/object/${o.object_id}` }, `← ${obj ? objLabel(obj) : t('Object')}`)),
     h('h1', {}, typeName(o.type_id)),
     o.archived_at ? h('p', { class: 'notice' }, t('Archived {d}: {r}', { d: fmtDateTime(o.archived_at), r: o.archive_reason })) : null,
     h('div', { class: 'card' },
@@ -447,7 +457,7 @@ function renderHistory(el, hist) {
     if (r.quote) {
       const q = r.quote;
       return h('div', { class: 'item' }, h('div', { class: 'grow' },
-        h('div', { class: 'title' }, t(q.method === 'send' ? 'Quote requested {d}' : 'Quote request drafted {d}', { d: fmtDateTime(q.sent_at) })),
+        h('div', { class: 'title' }, t({ send: 'Quote requested {d}', self: 'Quote request sent to me for forwarding {d}' }[q.method] || 'Quote request drafted {d}', { d: fmtDateTime(q.sent_at) })),
         h('div', { class: 'sub' }, t('to {r} · by {u}', { r: q.recipient, u: q.created_by })),
         h('details', {}, h('summary', { class: 'small' }, q.subject), h('pre', { class: 'small', style: 'white-space:pre-wrap' }, q.body))),
       h('span', { class: 'chip' }, t('Quote')));
@@ -499,7 +509,7 @@ async function requestQuote(o) {
   const obj = objectOf(o);
   const c = contractorOf(o);
   const vals = {
-    type: typeName(o.type_id), object: obj ? `${obj.code} – ${obj.name}` : '', address: obj?.address || '',
+    type: typeName(o.type_id), object: obj ? objLabel(obj) : '', address: obj?.address || '',
     due: o.next_due ? fmtDate(o.next_due) : '', site_contact: obj?.site_contact || '', note: o.note || '',
     contractor: c?.name || '', sender: state.me.display_name || state.me.email
   };
@@ -510,13 +520,16 @@ async function requestQuote(o) {
     const subj = h('input', { type: 'text', name: 'subject', value: subject });
     const text = h('textarea', { name: 'body', style: 'min-height:260px' }, body);
     const read = (method) => ({ method, to: to.value.trim(), subject: subj.value.trim(), body: text.value });
-    return h('form', { onsubmit: (e) => { e.preventDefault(); close(read('send')); } },
+    return h('form', { onsubmit: (e) => { e.preventDefault(); close(read('draft')); } },
       h('h2', {}, t('Request quote')),
       c ? null : h('p', { class: 'notice' }, t('No contractor is set for this obligation. Enter the e-mail address.')),
       field(t('To'), to, t('Several addresses separated by commas.')), field(t('Subject'), subj), field(t('Text'), text),
-      h('p', { class: 'hint' }, t('Send: the application sends it; replies and a copy go to your e-mail for notifications. Open as draft: your own e-mail program opens and you send it yourself.')),
-      h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, t('Send')),
-        h('button', { type: 'button', onclick: () => close(read('draft')) }, t('Open as draft')),
+      h('p', { class: 'hint' }, t('Open as draft: your own e-mail program opens with the request; you send it from your own address.')),
+      h('p', { class: 'hint' }, t('Send to me for forwarding: the request arrives at {e}; forward it to contractors from there.', { e: state.me.notify_email || state.me.email })),
+      h('p', { class: 'hint' }, t('Send to contractor: the application sends it; replies and a copy go to {e}.', { e: state.me.notify_email || state.me.email })),
+      h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, t('Open as draft')),
+        h('button', { type: 'button', onclick: () => close(read('self')) }, t('Send to me for forwarding')),
+        h('button', { type: 'button', onclick: () => close(read('send')) }, t('Send to contractor')),
         h('button', { type: 'button', onclick: () => close(null) }, t('Cancel'))));
   });
   if (!res) return;
@@ -526,7 +539,8 @@ async function requestQuote(o) {
         `?subject=${encodeURIComponent(res.subject)}&body=${encodeURIComponent(res.body)}`;
     }
     await api.call('requestQuote', { obligation_id: o.id, ...res });
-    toast(res.method === 'send' ? t('Quote request sent.') : t('Draft opened and recorded in the history.'));
+    toast(res.method === 'send' ? t('Quote request sent.') : res.method === 'self'
+      ? t('Sent to {e} for forwarding.', { e: state.me.notify_email || state.me.email }) : t('Draft opened and recorded in the history.'));
     route();
   } catch (err) { toast(err.message); }
 }
@@ -656,7 +670,7 @@ async function viewObligationForm(id, objectId) {
     } catch (err) { toast(err.message); }
   });
   form.addEventListener('submit', (e) => { e.preventDefault(); save(); });
-  mount(app, h('p', {}, h('a', { href: `#/object/${o.object_id}` }, `← ${obj ? obj.code + ' – ' + obj.name : t('Object')}`)),
+  mount(app, h('p', {}, h('a', { href: `#/object/${o.object_id}` }, `← ${obj ? objLabel(obj) : t('Object')}`)),
     h('h1', {}, id ? t('Edit obligation') : t('Add obligation')), h('div', { class: 'card' }, form), footer());
   refresh();
 }
@@ -724,7 +738,7 @@ async function viewMarkDone(id) {
       renderFiles();
       f.result = await api.callAt(storageUrl, 'upload', {
         mime: prepared.mime, base64: await toBase64(prepared.blob), date: doneDate.value, kind: f.kind,
-        fileName: f.file.name, originalSize: prepared.originalSize, objectFolder: obj ? `${obj.code} ${obj.name}` : 'unknown'
+        fileName: f.file.name, originalSize: prepared.originalSize, objectFolder: obj ? objLabel(obj) : 'unknown'
       }, 180000);
       f.status = t('Uploaded {s}', { s: fmtBytes(+f.result.size_bytes) });
       renderFiles();
@@ -749,7 +763,7 @@ async function viewMarkDone(id) {
   });
   form.addEventListener('submit', (e) => { e.preventDefault(); save(); });
   mount(app, h('p', {}, h('a', { href: `#/obligation/${id}` }, t('← Back'))),
-    h('h1', {}, t('Mark done')), h('p', { class: 'muted' }, `${typeName(o.type_id)} · ${obj ? obj.code + ' – ' + obj.name : ''}`),
+    h('h1', {}, t('Mark done')), h('p', { class: 'muted' }, `${typeName(o.type_id)} · ${obj ? objLabel(obj) : ''}`),
     h('div', { class: 'card' }, form), footer());
   showEffect();
 }
@@ -878,7 +892,7 @@ function settingsKinds(el) {
 
 function settingsContractors(el) {
   catalogEditor(el, {
-    title: t('Contractors'), table: t('Contractors'), list: state.contractors,
+    title: t('Contractors'), table: 'Contractors', list: state.contractors,
     describe: (r) => [r.contact_person, r.phone, r.email].filter(Boolean).join(' · '),
     fields: (r) => [field(t('Name'), h('input', { type: 'text', name: 'name', required: true, value: r.name || '' })),
       field(t('Contact person'), h('input', { type: 'text', name: 'contact_person', value: r.contact_person || '' })),

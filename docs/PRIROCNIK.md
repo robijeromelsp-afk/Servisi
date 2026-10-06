@@ -21,6 +21,11 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: oznaka objekta je neobvezna (prikaz samo imena, če je oznaka prazna ali enaka imenu);
+  vrsto objekta se lahko vpiše prosto – nova se doda v šifrant. Povpraševanje: glavni gumb »Odpri kot osnutek«,
+  nato »Pošlji meni za posredovanje« (na službeni naslov), nato »Pošlji izvajalcu«. Office 365 (pot c) – Robi se
+  posvetuje z informatikom.
+- Ideja za kasneje (ni potrjena): samodejno povpraševanje N dni pred rokom na službeni naslov.
 - 6. 10. 2026: **povpraševanje za ponudbo** pri obveznosti – »Pošlji« (aplikacija pošlje, odgovor in kopija na
   uporabnikov e-naslov za obvestila) ali »Odpri kot osnutek« (mailto, uporabnik pošlje sam). Oboje v zgodovini
   (list QuoteRequests). Predloga v nastavitvah (quote_subject, quote_body; prazno = privzeto v jeziku organizacije).

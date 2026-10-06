@@ -103,6 +103,9 @@ const SL = {
   'No obligations yet.': 'Še ni obveznosti.',
   'Archived obligations ({n})': 'Arhivirane obveznosti ({n})',
   'Code': 'Oznaka',
+  'Code (optional)': 'Oznaka (neobvezno)',
+  'Short label, e.g. K12. Leave empty if it is the same as the name.': 'Kratka oznaka, npr. K12. Pustite prazno, če je enaka imenu.',
+  'Choose from the list or type your own; a new kind is added to the list.': 'Izberite s seznama ali vpišite svojo; nova vrsta se doda na seznam.',
   'Short label, e.g. K12. Must be unique.': 'Kratka oznaka, npr. K12. Mora biti enolična.',
   'Responsible user': 'Odgovorna oseba',
   '— (e-mails go to administrators)': '— (pošta gre skrbnikom)',
@@ -328,6 +331,16 @@ const SL = {
   'Send: the application sends it; replies and a copy go to your e-mail for notifications. Open as draft: your own e-mail program opens and you send it yourself.':
     'Pošlji: sporočilo pošlje aplikacija; odgovori in kopija gredo na vaš e-naslov za obvestila. Odpri kot osnutek: odpre se vaš poštni program in sporočilo pošljete sami.',
   'Send': 'Pošlji',
+  'Send to me for forwarding': 'Pošlji meni za posredovanje',
+  'Send to contractor': 'Pošlji izvajalcu',
+  'Open as draft: your own e-mail program opens with the request; you send it from your own address.':
+    'Odpri kot osnutek: odpre se vaš poštni program s pripravljenim povpraševanjem; pošljete ga s svojega naslova.',
+  'Send to me for forwarding: the request arrives at {e}; forward it to contractors from there.':
+    'Pošlji meni za posredovanje: povpraševanje pride na {e}; od tam ga posredujete izvajalcem.',
+  'Send to contractor: the application sends it; replies and a copy go to {e}.':
+    'Pošlji izvajalcu: pošlje ga aplikacija; odgovori in kopija gredo na {e}.',
+  'Sent to {e} for forwarding.': 'Poslano na {e} za posredovanje.',
+  'Quote request sent to me for forwarding {d}': 'Povpraševanje poslano meni za posredovanje {d}',
   'Open as draft': 'Odpri kot osnutek',
   'Quote request sent.': 'Povpraševanje je poslano.',
   'Draft opened and recorded in the history.': 'Osnutek je odprt in zapisan v zgodovino.',

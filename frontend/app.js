@@ -589,10 +589,16 @@ async function viewObligationForm(id, objectId) {
   const months = String(o.rule_months || '').split(',').filter(Boolean);
   const types = active(state.obligationTypes);
   const groups = active(state.obligationGroups).sort((a, b) => (+a.sort || 0) - (+b.sort || 0));
-  const typeOptions = [{ value: '', label: t('— choose —') }, ...groups.map((g) => ({ group: g.name,
-    options: types.filter((ty) => ty.group_id === g.id).map((ty) => ({ value: ty.id, label: ty.name + (ty.is_suggestion === 'true' ? t(' (suggested)') : '') })) })),
-  ...types.filter((ty) => !ty.group_id || !byId(groups, ty.group_id)).map((ty) => ({ value: ty.id, label: ty.name }))]
-    .filter((x) => !x.group || x.options.length);
+  // Type and contractor can be picked from a list or typed; a new name is added to the catalog on save.
+  const typeLabel = (ty) => {
+    const g = byId(groups, ty.group_id);
+    const same = types.filter((x) => x.name.toLowerCase() === ty.name.toLowerCase()).length > 1;
+    return same && g ? `${ty.name} (${g.name})` : ty.name;
+  };
+  const typeByLabel = Object.fromEntries(types.map((ty) => [typeLabel(ty).toLowerCase(), ty]));
+  const curType = byId(state.obligationTypes, o.type_id);
+  const contractors = active(state.contractors);
+  const curContractor = byId(state.contractors, o.contractor_id);
   const users = active(state.users).filter((u) => u.active === 'true');
 
   const dayF = field(t('Day of month'), h('input', { type: 'number', name: 'rule_day', min: 1, max: 28, value: o.rule_day || '' }), t('1 to 28, so that every month has it.'));
@@ -604,9 +610,17 @@ async function viewObligationForm(id, objectId) {
   const preview = h('div', { class: 'notice' });
 
   const form = h('form', {},
-    field(t('Obligation type'), select('type_id', typeOptions, o.type_id, { required: true }),
-      t('Types marked "suggested" come from a starting list and are not verified.')),
-    field(t('Contractor'), select('contractor_id', [{ value: '', label: '—' }, ...active(state.contractors).map((c) => ({ value: c.id, label: c.name }))], o.contractor_id)),
+    field(t('Obligation type'), h('input', { type: 'text', name: 'type_label', list: 'obligation-types', required: true, autocomplete: 'off',
+      value: curType ? typeLabel(curType) : '' }),
+      t('Choose from the list or type a new one; it is added to the obligation types.')),
+    h('datalist', { id: 'obligation-types' }, types.map((ty) => h('option', { value: typeLabel(ty) }))),
+    field(t('Contractor'), h('input', { type: 'text', name: 'contractor_name', list: 'contractors', autocomplete: 'off',
+      value: curContractor ? curContractor.name : '', oninput: (e) => fillContractor(e.target.value) }),
+      t('Choose from the list or type a new one; it is added to the contractors.')),
+    h('datalist', { id: 'contractors' }, contractors.map((c) => h('option', { value: c.name }))),
+    h('div', { class: 'row' },
+      h('div', { class: 'grow' }, field(t('Contractor e-mail'), h('input', { type: 'email', name: 'contractor_email', value: curContractor?.email || '' }))),
+      h('div', { class: 'grow' }, field(t('Contractor phone'), h('input', { type: 'text', name: 'contractor_phone', value: curContractor?.phone || '' })))),
     h('h2', {}, t('Repeat')),
     h('div', { class: 'field' }, h('label', {}, t('Count the next due date')),
       h('label', { class: 'inline' }, h('input', { type: 'radio', name: 'count_from', value: 'calendar', checked: o.count_from === 'calendar' }), t('By calendar (fixed dates)')),
@@ -629,6 +643,13 @@ async function viewObligationForm(id, objectId) {
     field(t('Note'), h('textarea', { name: 'note' }, o.note || '')),
     h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, t('Save')),
       h('a', { class: 'btn', href: id ? `#/obligation/${id}` : `#/object/${o.object_id}` }, t('Cancel'))));
+
+  function fillContractor(name) {
+    const c = contractors.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
+    if (!c) return;
+    form.elements.contractor_email.value = c.email || '';
+    form.elements.contractor_phone.value = c.phone || '';
+  }
 
   const currentRule = () => {
     const d = formData(form);
@@ -660,11 +681,16 @@ async function viewObligationForm(id, objectId) {
     const extra = (d.recipient_users || []).map((u) => ({ userId: u }))
       .concat(d.recipient_emails.split(/[\s,;]+/).filter(Boolean).map((e) => ({ email: e })));
     const payload = { ...d, rule_months: (d.rule_months || []).join(','), extra_recipients: extra, object_id: o.object_id, id: id || undefined, rev: o.rev };
+    const ty = typeByLabel[(d.type_label || '').trim().toLowerCase()];
+    if (ty) payload.type_id = ty.id; else payload.type_name = (d.type_label || '').trim();
+    delete payload.type_label;
     delete payload.recipient_users;
     delete payload.recipient_emails;
     try {
       const saved = await api.call('saveObligation', payload);
       replaceIn(state.obligations, saved);
+      if (!byId(state.obligationTypes, saved.type_id) || (saved.contractor_id && !byId(state.contractors, saved.contractor_id)) ||
+        payload.contractor_email || payload.contractor_phone) await reload();
       toast(saved.status === 'Incomplete' ? t('Saved, but the repeat settings are incomplete.') : t('Saved. Next due {d}.', { d: fmtDate(saved.next_due) }));
       go(`/obligation/${saved.id}`);
     } catch (err) { toast(err.message); }

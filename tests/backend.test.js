@@ -491,3 +491,26 @@ test('objects: code is optional; kind can be typed and is added once', () => {
   assert.equal(c.kind_id, '');
   assert.equal(b.call('saveObject', OWNER, { name: '' }).ok, false);
 });
+
+test('obligation: type and contractor can be typed; new ones are added to the lists', () => {
+  const b = setUp();
+  const obj = makeObject(b);
+  const o = b.ok('saveObligation', OWNER, { object_id: obj.id, type_name: 'Servis toplotne črpalke',
+    contractor_name: 'Termo d.o.o.', contractor_email: 'Info@Termo.example', contractor_phone: '041 1', ...YEARLY });
+  let boot = b.ok('bootstrap', OWNER);
+  const ty = boot.obligationTypes.find((x) => x.id === o.type_id);
+  assert.equal(ty.name, 'Servis toplotne črpalke');
+  assert.equal(ty.is_suggestion, 'false');
+  const c = boot.contractors.find((x) => x.id === o.contractor_id);
+  assert.equal(c.email, 'info@termo.example');
+  const o2 = b.ok('saveObligation', OWNER, { object_id: obj.id, type_name: 'servis toplotne ČRPALKE',
+    contractor_name: 'termo d.o.o.', contractor_phone: '041 2', ...YEARLY });
+  boot = b.ok('bootstrap', OWNER);
+  assert.equal(o2.type_id, o.type_id, 'existing type reused');
+  assert.equal(o2.contractor_id, o.contractor_id, 'existing contractor reused');
+  assert.equal(boot.contractors.find((x) => x.id === o.contractor_id).phone, '041 2', 'phone updated');
+  assert.equal(boot.contractors.filter((x) => x.name.toLowerCase() === 'termo d.o.o.').length, 1);
+  const o3 = b.ok('saveObligation', OWNER, { id: o2.id, rev: o2.rev, object_id: obj.id, type_id: o.type_id, contractor_name: '', ...YEARLY });
+  assert.equal(o3.contractor_id, '');
+  assert.equal(b.call('saveObligation', OWNER, { object_id: obj.id, type_name: '', ...YEARLY }).ok, false);
+});

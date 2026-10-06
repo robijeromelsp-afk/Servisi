@@ -21,6 +21,10 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: **brez plačljivih storitev** (Claude API ključ ni v načrtu). Ideja za kasneje: predloge
+  zapisnikov, ki se izpolnjujejo na telefonu ob servisu – MANJKA primer pravega zapisnika.
+- 6. 10. 2026: za Lucijo se zaenkrat **nič ne postavlja**; ni odločeno, ali bo podatke imela na svojem
+  ali Robijevem Drive (ali aplikacije sploh ne bo uporabljala). Obe različici opisani v `POSTAVITEV.md`, C1/C2.
 - 6. 10. 2026: oznaka objekta je neobvezna (prikaz samo imena, če je oznaka prazna ali enaka imenu);
   vrsto objekta se lahko vpiše prosto – nova se doda v šifrant. Povpraševanje: glavni gumb »Odpri kot osnutek«,
   nato »Pošlji meni za posredovanje« (na službeni naslov), nato »Pošlji izvajalcu«. Office 365 (pot c) – Robi se

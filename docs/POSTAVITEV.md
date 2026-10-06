@@ -58,18 +58,34 @@ Nobenega gesla ali žetona se ne pošilja v pogovor in ne vpisuje v kodo.
 7. *Settings → Users*: dodaj ostale uporabnike. *Settings → Status*: preveri, da je sprožilec »Installed«,
    in *Send test e-mail to me*.
 
-## C. Postavitev, ki hrani priloge in podatke v Drive drugega računa (Lucija → Robi)
+## C. Druga organizacija z lastnim zaledjem (npr. Lucija)
 
-1. Robi v svojem Drive ustvari prazno Google tabelo (npr. »Servisi – <organizacija>«) in jo deli
-   z Lucijo kot **urejevalko**.
+Odločitev, kje so podatki, še ni sprejeta (6. 10. 2026). Pripravljeni sta obe različici; koda je za
+obe enaka, razlika je samo v korakih postavitve.
+
+Skupni koraki (obe različici):
+1. Robi v Google Cloud → *Google Auth Platform → Audience → Test users* doda njen Google račun
+   (dokler je OAuth v načinu *Testing*, se drugače ne more prijaviti).
 2. Lucija opravi B.1–B.5 s svojim računom (secret `CLASPRC_LUCIJA`, target `lucija-prod`).
-3. Robi v svoji aplikaciji: *Settings → Storage* → doda Lucijin e-naslov in ime mape.
-4. Lucija v B.6 prilepi povezavo do tabele iz C.1 in kot *Attachment storage* URL Robijeve produkcijske postavitve.
-5. Rezultat: tabela in priloge so v Robijevem Drive (lastnik Robi), pošta gre z Lucijinega naslova,
-   v aplikaciji vidi vsak samo svojo organizacijo.
+   Pošta gre z njenega naslova, ker zaledje teče pod njenim računom.
+3. V aplikaciji vidi vsak samo svojo organizacijo.
 
-PREVERITI ob prvi izvedbi C: da Apps Script pod Lucijinim računom res odpre in piše deljeno tabelo
+### C1. Podatki na njenem Drive (enostavnejše)
+4. V B.6 pusti *Spreadsheet* in *Attachment storage* **prazno** → tabela in priloge nastanejo v
+   njenem Drive. Robijeva postavitev ni potrebna.
+
+### C2. Podatki na Robijevem Drive
+Pogoj: Robijeva produkcijska postavitev (`robi-prod`), ki hrani priloge.
+4. Robi v svojem Drive ustvari prazno Google tabelo (npr. »Servisi – <organizacija>«) in jo deli
+   z Lucijo kot **urejevalko**.
+5. Robi v svoji aplikaciji: *Settings → Storage* → doda Lucijin e-naslov in ime mape.
+6. Lucija v B.6 prilepi povezavo do tabele iz C2.4 in kot *Attachment storage* URL Robijeve
+   produkcijske postavitve. Tabela in priloge so v Robijevem Drive (lastnik Robi).
+
+PREVERITI ob prvi izvedbi C2: da Apps Script pod Lucijinim računom res odpre in piše deljeno tabelo
 (pri Google Workspace računu agencije lahko skrbnik prepove deljenje z zunanjimi).
+
+Kasnejši prehod C1 → C2 ali obratno: razdelek D (izvoz/uvoz).
 
 ## D. Selitev na drugo postavitev
 

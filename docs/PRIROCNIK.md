@@ -21,6 +21,8 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: pošiljatelj ostane Google račun postavitve (pot B; ime pošiljatelja »Servisi«). Pot A
+  (servisi@dolb.si prek storitve za pošiljanje, npr. Brevo) je odložena – za kasneje.
 - 6. 10. 2026 – **POSTOPEK OBJAVE:** ko Robi napiše »objavi«, Claude sam združi PR v `main` (Cloudflare objavi
   stran), objavi zaledje in preveri delovanje. Brez besede »objavi« ni objave na `servisi.dolb.si` ali produkcijo.
   Delo na testni postavitvi (`robi-test`) brez spraševanja.
@@ -52,7 +54,8 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 ## Pasti
 - Ime spremenljivke `t` v funkciji zasenči prevajalnik `t()` (zgodilo se v obrazcu obveznosti) – ne uporabljaj `t` kot ime.
 - Nov stolpec v SCHEMA: povečaj `SCHEMA_VERSION` v `backend/db.js`, sicer obstoječa tabela ne dobi stolpca do dnevnega teka.
-- Iz oblačnega okolja Claude `*.pages.dev` ni dosegljiv (proxy 403); `script.google.com` je.
+- Iz oblačnega okolja Claude `*.pages.dev` in `servisi.dolb.si` nista dosegljiva (proxy 403); `script.google.com` je.
+  Stran zato preveri Robi z enim pogledom, zaledje Claude sam.
 - `Publish app` na OAuth zaslonu zahteva izpolnjen Branding (domača stran, zasebnost) – zato ostaja *Testing*.
 - **Apps Script nalaga datoteke po vrsti.** Sklic na funkcijo iz druge datoteke na vrhnji ravni
   (npr. tabela dejanj) je ob nalaganju `undefined`. Zato `actions_()` sestavi tabelo ob klicu.

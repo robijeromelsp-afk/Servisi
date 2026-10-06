@@ -1,4 +1,5 @@
 // Small DOM helpers. All text goes through textContent, never innerHTML.
+import { t } from './i18n.js';
 
 export function h(tag, attrs, ...children) {
   const el = document.createElement(tag);
@@ -88,13 +89,14 @@ export function modal(build) {
   });
 }
 
-export function askReason(title, label = 'Reason') {
+export function askReason(title, label) {
+  label = label || t('Reason');
   return modal((close) => {
     const input = h('textarea', { name: 'reason', required: true });
     const form = h('form', { onsubmit: (e) => { e.preventDefault(); if (input.value.trim()) close(input.value.trim()); } },
       h('h2', {}, title), field(label, input),
-      h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, 'Confirm'),
-        h('button', { type: 'button', onclick: () => close(null) }, 'Cancel')));
+      h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, t('Confirm')),
+        h('button', { type: 'button', onclick: () => close(null) }, t('Cancel'))));
     setTimeout(() => input.focus(), 50);
     return form;
   });
@@ -105,7 +107,7 @@ export function busy(button, fn) {
     if (button.disabled) return;
     const label = button.textContent;
     button.disabled = true;
-    button.textContent = 'Working…';
+    button.textContent = t('Working…');
     try {
       return await fn(...args);
     } finally {

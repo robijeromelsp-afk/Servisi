@@ -21,6 +21,13 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: aplikacija in pošta v **slovenščini**, angleščina pripravljena (nastavitev »language«
+  v Settings > Notifications). Prej je veljalo: gumbi angleško – Robi spremenil.
+- 6. 10. 2026: uporabnik ima lahko **e-naslov za obvestila** (npr. službeni); prijava ostane z Google računom.
+- 6. 10. 2026: testna postavitev `robi-test` deluje (prijava, tabela, sprožilec, testna in mesečna pošta preverjeni
+  pri Robiju). Stran `servisi.dolb.si` je za zdaj priključena na TESTNO zaledje.
+- Client ID (ni skrivnost): `253205263906-emde6v6iael2s3ls3jpt1o6ksq3rqe8a.apps.googleusercontent.com`;
+  OAuth zaslon je v načinu *Testing* – prijava samo za vpisane testne uporabnike (Google Cloud > Audience > Test users).
 - 5. 10. 2026: vsa priporočila iz vprašanj sprejeta; koledarsko štetje ob zamudi = b1.
 - 5. 10. 2026: vse na Robijevem Drive (obe tabeli, priloge); podatki organizacij ločeni.
 - 5. 10. 2026: Robijevo zaledje teče pod robi.jeromel@gmail.com; dolb.si je v Robijevem Cloudflare.
@@ -40,6 +47,10 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 6. `docs/SELITEV.md` – postopek selitve prilog.
 
 ## Pasti
+- Ime spremenljivke `t` v funkciji zasenči prevajalnik `t()` (zgodilo se v obrazcu obveznosti) – ne uporabljaj `t` kot ime.
+- Nov stolpec v SCHEMA: povečaj `SCHEMA_VERSION` v `backend/db.js`, sicer obstoječa tabela ne dobi stolpca do dnevnega teka.
+- Iz oblačnega okolja Claude `*.pages.dev` ni dosegljiv (proxy 403); `script.google.com` je.
+- `Publish app` na OAuth zaslonu zahteva izpolnjen Branding (domača stran, zasebnost) – zato ostaja *Testing*.
 - **Apps Script nalaga datoteke po vrsti.** Sklic na funkcijo iz druge datoteke na vrhnji ravni
   (npr. tabela dejanj) je ob nalaganju `undefined`. Zato `actions_()` sestavi tabelo ob klicu.
   Nadomestek v testih nalaga datoteke enako in to ujame.

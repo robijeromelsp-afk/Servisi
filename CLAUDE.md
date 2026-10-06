@@ -1,7 +1,10 @@
 # CLAUDE.md – pravila za delo na tem repozitoriju
 
 Ta datoteka je namenjena Claude in vsakomur, ki nadaljuje razvoj. Pogovor z lastnikom je v
-slovenščini; vmesnik aplikacije (gumbi, meniji) je v angleščini.
+slovenščini. Aplikacija je dvojezična (nastavitev organizacije »language«: sl privzeto, en):
+v kodi so besedila angleška in so ključi; slovenski prevodi so v `frontend/i18n.js`
+(vmesnik), `backend/mail.js` (pošta), `backend/i18n.js` (napake) in `shared/schedule.js`
+(opisi ponavljanja). Vsako novo besedilo dodaj v OBA jezika.
 
 ## Najprej preberi
 1. `docs/PRIROCNIK.md` – stanje, odločitve, pasti. Posodobi ga ob vsaki pomembni spremembi.

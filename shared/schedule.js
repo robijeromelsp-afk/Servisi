@@ -139,8 +139,32 @@ var Schedule = (function () {
     return Number.isInteger(n) && n >= lo && n <= hi;
   }
 
-  /** Returns a list of human-readable problems; empty list = complete rule. */
-  function validate(raw) {
+  var VALIDATE_SL = {
+    'Repeat type is missing or unknown.': 'Vrsta ponavljanja manjka ali ni znana.',
+    'Choose whether to count from completion or by calendar.': 'Izberite, ali se rok šteje od izvedbe ali po koledarju.',
+    'Start date is not a valid date.': 'Začetni datum ni veljaven.',
+    'Last done date is not a valid date.': 'Datum zadnje izvedbe ni veljaven.',
+    'Enter a start date or the date it was last done.': 'Vnesite začetni datum ali datum zadnje izvedbe.',
+    'Weekday must be 1 (Monday) to 7 (Sunday).': 'Dan v tednu mora biti od 1 (ponedeljek) do 7 (nedelja).',
+    'Interval must be 1 to 3650 days.': 'Interval mora biti od 1 do 3650 dni.',
+    'Calendar counting every N days needs a start date.': 'Štetje po koledarju na N dni potrebuje začetni datum.',
+    'Day of month must be 1 to 28.': 'Dan v mesecu mora biti od 1 do 28.',
+    'List the months (1 to 12).': 'Izberite mesece.',
+    'Month must be 1 to 12.': 'Mesec mora biti od 1 do 12.',
+    'Interval must be 1 to 100 years.': 'Interval mora biti od 1 do 100 let.',
+    'Calendar counting over several years needs a start date.': 'Štetje po koledarju na več let potrebuje začetni datum.'
+  };
+
+  /**
+   * Returns a list of human-readable problems; empty list = complete rule.
+   * lang: 'en' (default) or 'sl'.
+   */
+  function validate(raw, lang) {
+    var e = validateEn(raw);
+    return lang === 'sl' ? e.map(function (m) { return VALIDATE_SL[m] || m; }) : e;
+  }
+
+  function validateEn(raw) {
     var r = normalize(raw);
     var e = [];
     if (TYPES.indexOf(r.type) < 0) e.push('Repeat type is missing or unknown.');
@@ -276,13 +300,14 @@ var Schedule = (function () {
    * @param raw          rule (see normalize)
    * @param completions  [{ id, doneDate, order? }] valid (not voided) completions;
    *                     order (e.g. created timestamp) breaks ties on equal dates.
+   * @param lang         language of the error messages ('en' default, 'sl')
    * @return { complete, errors, nextDue, history }
    *   history: chronological list of
    *     { kind: 'done', due, doneDate, late, id }   a completion and the due it closed
    *     { kind: 'skipped', due }                     calendar due passed over (b1)
    */
-  function compute(raw, completions) {
-    var errors = validate(raw);
+  function compute(raw, completions, lang) {
+    var errors = validate(raw, lang);
     if (errors.length) return { complete: false, errors: errors, nextDue: null, history: [] };
     var r = normalize(raw);
     var list = (completions || []).slice().filter(function (c) { return isDate(c.doneDate); });
@@ -333,9 +358,48 @@ var Schedule = (function () {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
-  /** Short English description of a rule, e.g. "Every year on 15 May, by calendar". */
-  function describe(raw) {
+  var MONTHS_SL_GEN = ['januarja', 'februarja', 'marca', 'aprila', 'maja', 'junija', 'julija', 'avgusta',
+    'septembra', 'oktobra', 'novembra', 'decembra'];
+  var MONTHS_SL_SHORT = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec'];
+  var WEEKDAYS_SL_ACC = ['ponedeljek', 'torek', 'sredo', 'četrtek', 'petek', 'soboto', 'nedeljo'];
+
+  /** Slovenian noun form after a number: 1 leto, 2 leti, 3 leta, 5 let. */
+  function slPlural(n, forms) {
+    var m = n % 100;
+    return m === 1 ? forms[0] : m === 2 ? forms[1] : (m === 3 || m === 4) ? forms[2] : forms[3];
+  }
+
+  function describeSl(r) {
+    var cal = r.countFrom === 'calendar';
+    var base;
+    switch (r.type) {
+      case 'dan': base = 'Vsak dan'; break;
+      case 'teden': base = cal && r.weekday ? (r.weekday === 3 || r.weekday >= 6 ? 'Vsako ' : 'Vsak ') + WEEKDAYS_SL_ACC[r.weekday - 1] : 'Vsak teden'; break;
+      case 'n_dni': base = 'Na ' + r.interval + ' ' + slPlural(r.interval, ['dan', 'dneva', 'dni', 'dni']); break;
+      case 'mesec': base = cal ? 'Vsak mesec, ' + r.day + '. dne' : 'Vsak mesec'; break;
+      case 'cetrtletje':
+      case 'polletje':
+        base = (r.type === 'cetrtletje' ? 'Četrtletno' : 'Polletno') + (cal
+          ? ', ' + r.day + '. dne v mesecih ' + r.months.map(function (m) { return MONTHS_SL_SHORT[m - 1]; }).join(', ')
+          : '');
+        break;
+      case 'leto': base = cal ? 'Vsako leto, ' + r.day + '. ' + MONTHS_SL_GEN[r.month - 1] : 'Vsako leto'; break;
+      case 'vec_let':
+        base = 'Na ' + r.interval + ' ' + slPlural(r.interval, ['leto', 'leti', 'leta', 'let']) +
+          (cal ? ', ' + r.day + '. ' + MONTHS_SL_GEN[r.month - 1] : '');
+        break;
+      default: return 'Ponavljanje ni nastavljeno';
+    }
+    return base + (cal ? ', po koledarju' : ', od zadnje izvedbe');
+  }
+
+  /**
+   * Short description of a rule. lang 'en' (default): "Every year on 15 May, by calendar";
+   * 'sl': "Vsako leto, 15. maja, po koledarju".
+   */
+  function describe(raw, lang) {
     var r = normalize(raw);
+    if (lang === 'sl') return describeSl(r);
     var base;
     switch (r.type) {
       case 'dan': base = 'Every day'; break;

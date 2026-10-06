@@ -22,8 +22,11 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true });
   // Google's sign-in script is not used with dev sign-in (and is not reachable from the sandbox).
   await ctx.route('https://accounts.google.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }));
+  // The flow below is written against the English interface; Slovenian is checked at the end.
+  await ctx.addInitScript(() => { if (!localStorage.getItem('servisi.lang')) localStorage.setItem('servisi.lang', 'en'); });
   const page = await ctx.newPage();
   const errors = [];
+  global.__errors = errors;
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   const shot = async (name) => { if (SHOTS) await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true }); };
@@ -180,7 +183,19 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.goto(BASE + '/#/');
   await page.waitForSelector('text=Nothing here.');
 
+  step('switch to Slovenian: interface, descriptions and errors');
+  await page.goto(BASE + '/#/settings/general');
+  await page.selectOption('select[name=language]', 'sl');
+  await page.click('button:has-text("Save")');
+  await page.waitForSelector('.bottomnav span:has-text("Pregled")');
+  await page.goto(BASE + '/#/objects');
+  await page.waitForSelector('h1:has-text("Objekti")');
+  await page.check('text=Prikaži arhivirane');
+  await page.click('.item:has-text("K1")');
+  await page.waitForSelector('button:has-text("Obnovi")');
+  await shot('09-slovenian');
+
   assert.deepEqual(errors, [], 'no browser errors');
   console.log('E2E OK');
   await browser.close();
-})().catch((e) => { console.error('E2E FAILED:', e.message); process.exit(1); });
+})().catch((e) => { console.error('E2E FAILED:', e.message, '\nBrowser errors:', global.__errors); process.exit(1); });

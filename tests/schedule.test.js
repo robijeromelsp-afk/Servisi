@@ -260,3 +260,20 @@ test('calendar mode: next due is always after max(due, done) and on the grid', (
     }
   }
 });
+
+test('Slovenian descriptions and messages', () => {
+  assert.equal(S.describe({ type: 'leto', countFrom: 'calendar', day: 15, month: 5 }, 'sl'), 'Vsako leto, 15. maja, po koledarju');
+  assert.equal(S.describe({ type: 'mesec', countFrom: 'calendar', day: 1 }, 'sl'), 'Vsak mesec, 1. dne, po koledarju');
+  assert.equal(S.describe({ type: 'cetrtletje', countFrom: 'calendar', day: 10, months: '1,4,7,10' }, 'sl'),
+    'Četrtletno, 10. dne v mesecih jan, apr, jul, okt, po koledarju');
+  assert.equal(S.describe({ type: 'vec_let', countFrom: 'completion', interval: 2 }, 'sl'), 'Na 2 leti, od zadnje izvedbe');
+  assert.equal(S.describe({ type: 'vec_let', countFrom: 'completion', interval: 3 }, 'sl'), 'Na 3 leta, od zadnje izvedbe');
+  assert.equal(S.describe({ type: 'vec_let', countFrom: 'completion', interval: 5 }, 'sl'), 'Na 5 let, od zadnje izvedbe');
+  assert.equal(S.describe({ type: 'n_dni', countFrom: 'calendar', interval: 14 }, 'sl'), 'Na 14 dni, po koledarju');
+  assert.equal(S.describe({ type: 'teden', countFrom: 'calendar', weekday: 3 }, 'sl'), 'Vsako sredo, po koledarju');
+  assert.equal(S.describe({ type: 'teden', countFrom: 'calendar', weekday: 1 }, 'sl'), 'Vsak ponedeljek, po koledarju');
+  assert.equal(S.describe({}, 'sl'), 'Ponavljanje ni nastavljeno');
+  assert.deepEqual(S.validate({ type: 'mesec', countFrom: 'calendar', day: 29, start: '2027-01-01' }, 'sl'),
+    ['Dan v mesecu mora biti od 1 do 28.']);
+  assert.equal(S.compute({ type: 'leto' }, [], 'sl').errors[0], 'Izberite, ali se rok šteje od izvedbe ali po koledarju.');
+});

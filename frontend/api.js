@@ -1,4 +1,5 @@
 // Talks to the Apps Script backends. Sign-in with Google Identity Services.
+import { t, getLang } from './i18n.js';
 
 const CFG = window.SERVISI_CONFIG || { backends: [], googleClientId: '' };
 const TOKEN_KEY = 'servisi.idToken';
@@ -86,14 +87,14 @@ async function post(url, action, data, timeoutMs = 60000) {
     res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, idToken, data }),
+      body: JSON.stringify({ action, idToken, data, lang: getLang() }),
       redirect: 'follow',
       signal: ctrl.signal
     });
   } catch (e) {
     throw new ApiError('NETWORK', e.name === 'AbortError'
-      ? 'The server did not answer in time. Check the connection and try again.'
-      : 'No connection to the server. Check the connection and try again.');
+      ? t('The server did not answer in time. Check the connection and try again.')
+      : t('No connection to the server. Check the connection and try again.'));
   } finally {
     clearTimeout(timer);
   }
@@ -101,7 +102,7 @@ async function post(url, action, data, timeoutMs = 60000) {
   try {
     body = await res.json();
   } catch (e) {
-    throw new ApiError('BAD_RESPONSE', 'The server returned an unexpected answer (HTTP ' + res.status + ').');
+    throw new ApiError('BAD_RESPONSE', t('The server returned an unexpected answer (HTTP {s}).', { s: res.status }));
   }
   if (!body.ok) {
     if (body.error.code === 'AUTH') setToken(null);
@@ -111,7 +112,7 @@ async function post(url, action, data, timeoutMs = 60000) {
 }
 
 export function call(action, data = {}) {
-  if (!backendUrl) throw new ApiError('NO_BACKEND', 'No organisation selected.');
+  if (!backendUrl) throw new ApiError('NO_BACKEND', t('No organisation selected.'));
   return post(backendUrl, action, data);
 }
 

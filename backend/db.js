@@ -16,7 +16,7 @@ var COMMON_COLUMNS = ['id', 'org_id', 'created_at', 'created_by', 'updated_at', 
 var SCHEMA = {
   Organizations: ['name', 'timezone', 'locale'],
   Settings: ['key', 'value'],
-  Users: ['email', 'display_name', 'role', 'active'],
+  Users: ['email', 'display_name', 'role', 'active', 'notify_email'],
   ObjectKinds: ['name', 'sort'],
   ObligationGroups: ['name', 'sort'],
   ObligationTypes: ['group_id', 'name', 'description', 'is_suggestion', 'sort'],
@@ -40,6 +40,9 @@ var SCHEMA = {
 /** Tables that are not audited themselves (they are logs). */
 var UNAUDITED = { AuditLog: true, MailLog: true, Status: true };
 
+/** Raise when SCHEMA changes; the first request after a deployment then adds the new columns. */
+var SCHEMA_VERSION = '2';
+
 var DB_CACHE_ = null;
 
 function db_() {
@@ -47,6 +50,10 @@ function db_() {
     var id = prop_('SPREADSHEET_ID');
     if (!id) throw appError_('NOT_SET_UP', 'The application has not been set up yet.');
     DB_CACHE_ = new Db_(SpreadsheetApp.openById(id));
+    if (prop_('SCHEMA_VERSION') !== SCHEMA_VERSION) {
+      DB_CACHE_.ensureSchema();
+      setProp_('SCHEMA_VERSION', SCHEMA_VERSION);
+    }
   }
   return DB_CACHE_;
 }

@@ -438,8 +438,18 @@ async function viewObligation(id) {
       h('button', { onclick: () => requestQuote(o) }, t('Request quote')),
       h('a', { class: 'btn', href: `#/obligation/${id}/edit` }, t('Edit')), archiveBtn),
     h('h2', {}, t('History')), h('div', { class: 'card' }, historyEl), footer());
-  const hist = await api.call('history', { obligation_id: id });
-  renderHistory(historyEl, hist);
+  // A failed history load must not hide the obligation (it was already shown above).
+  const loadHistory = async () => {
+    mount(historyEl, h('p', { class: 'muted' }, t('Loading history…')));
+    try {
+      renderHistory(historyEl, await api.call('history', { obligation_id: id }));
+    } catch (e) {
+      if (e.code === 'AUTH') throw e;
+      mount(historyEl, h('p', { class: 'error' }, t('History could not be loaded: {m}', { m: e.message })),
+        h('button', { onclick: () => loadHistory().catch(showError) }, t('Try again')));
+    }
+  };
+  await loadHistory();
 }
 
 function renderHistory(el, hist) {

@@ -111,13 +111,30 @@ async function post(url, action, data, timeoutMs = 60000) {
   return body.data;
 }
 
+// Actions that only read. Apps Script now and then answers with an HTML page (e.g. HTTP 404)
+// instead of our JSON; these are safe to repeat, so they are retried before the user sees an error.
+const READ_ONLY = new Set(['bootstrap', 'history', 'status', 'whoami']);
+const RETRY_CODES = new Set(['BAD_RESPONSE', 'NETWORK']);
+
+async function postRetrying(url, action, data, timeoutMs) {
+  const delays = READ_ONLY.has(action) ? [1000, 3000] : [];
+  for (let i = 0; ; i++) {
+    try {
+      return await post(url, action, data, timeoutMs);
+    } catch (e) {
+      if (i >= delays.length || !RETRY_CODES.has(e.code)) throw e;
+      await new Promise((r) => setTimeout(r, delays[i]));
+    }
+  }
+}
+
 export function call(action, data = {}) {
   if (!backendUrl) throw new ApiError('NO_BACKEND', t('No organisation selected.'));
-  return post(backendUrl, action, data);
+  return postRetrying(backendUrl, action, data);
 }
 
 export function callAt(url, action, data = {}, timeoutMs) {
-  return post(url, action, data, timeoutMs);
+  return postRetrying(url, action, data, timeoutMs);
 }
 
 /** Asks every configured backend who the signed-in user is. */

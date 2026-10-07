@@ -71,6 +71,26 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   assert.equal((await page.textContent('.due')).trim(), '15.01.2026');
   assert.ok(await page.isVisible('.chip.overdue'));
 
+  step('history survives an HTML/404 answer from Apps Script');
+  const isHistory = (req) => req.method() === 'POST' && /"action":"history"/.test(req.postData() || '');
+  const errorsBefore = errors.length;
+  let failures = 1;
+  await page.route('**/*', (r) => (isHistory(r.request()) && failures-- > 0
+    ? r.fulfill({ status: 404, contentType: 'text/html', body: '<html>Not Found</html>' }) : r.fallback()));
+  await page.reload();
+  await page.waitForSelector('text=Not done yet in this application.');
+  failures = 99;
+  await page.reload();
+  await page.waitForSelector('text=History could not be loaded', { timeout: 15000 });
+  assert.ok(await page.isVisible('text=Next due'), 'obligation stays visible');
+  failures = 0;
+  await page.click('button:has-text("Try again")');
+  await page.waitForSelector('text=Not done yet in this application.');
+  await page.unroute('**/*');
+  // The 404s above were injected on purpose; any other browser error still fails the test.
+  errors.splice(errorsBefore, errors.length - errorsBefore,
+    ...errors.slice(errorsBefore).filter((e) => !/status of 404/.test(e)));
+
   step('add second obligation (quarterly by calendar) and an incomplete one');
   await page.click('a:has-text("K1 – Boiler room 1")');
   await page.click('text=Add obligation');

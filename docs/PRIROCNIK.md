@@ -64,6 +64,11 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 6. `docs/SELITEV.md` – postopek selitve prilog.
 
 ## Pasti
+- 7. 10. 2026: Apps Script je pri branju zgodovine po shranjeni izvedbi vrnil **HTTP 404** (HTML namesto JSON),
+  zaledje je bilo ob preverjanju takoj nato v redu. Vzrok ni ugotovljen (MANJKA: dnevnik izvajanj Apps Script
+  za tisti čas). Zdaj: bralni klici (`bootstrap`, `history`, `status`, `whoami`) se ob takem odgovoru ponovijo
+  do 2-krat; neuspelo nalaganje zgodovine ne podre več zaslona obveznosti. Pisalni klici se ne ponavljajo sami
+  (`markDone` ima zaščito `expected_due`, ponovitev ne more dvakrat zapisati iste izvedbe).
 - Pri prevajanju: besedila, ki so hkrati vrednosti (npr. 'Overdue', 'Report', 'User'), so bila izpuščena iz
   samodejnega ovijanja s t() – zavihki na Pregledu so ostali angleški. Zdaj e2e v slovenščini obišče vse zaslone
   in javi vsako angleško besedilo iz slovarja (`tests/e2e.js`, korak »no English text left«).

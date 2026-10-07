@@ -135,6 +135,8 @@ const SL = {
   'Remind me': 'Opomni me',
   'History': 'Zgodovina',
   'Loading history…': 'Nalagam zgodovino…',
+  'History could not be loaded: {m}': 'Zgodovine ni bilo mogoče naložiti: {m}',
+  'Try again': 'Poskusi znova',
   'Not done yet in this application.': 'V tej aplikaciji še ni bilo opravljeno.',
   'Skipped due date {d}': 'Izpuščen rok {d}',
   'Passed over because the previous due date was done late (calendar counting).': 'Preskočen, ker je bil prejšnji rok opravljen z zamudo (štetje po koledarju).',

@@ -68,6 +68,9 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 6. `docs/SELITEV.md` – postopek selitve prilog.
 
 ## Pasti
+- 7. 10. 2026: po objavi je telefon naložil nov `app.js` in star `api.js` iz predpomnilnika (»api.cachedData is not
+  a function«). Zdaj `tools/build.js` vsakemu uvozu modula doda `?v=<različica>` in zapiše `_headers`
+  (`Cache-Control: no-cache`); test `tests/build.test.js` to preverja.
 - 7. 10. 2026: Apps Script je pri branju zgodovine po shranjeni izvedbi vrnil **HTTP 404** (HTML namesto JSON),
   zaledje je bilo ob preverjanju takoj nato v redu. Vzrok ni ugotovljen (MANJKA: dnevnik izvajanj Apps Script
   za tisti čas). Zdaj: bralni klici (`bootstrap`, `history`, `status`, `whoami`) se ob takem odgovoru ponovijo

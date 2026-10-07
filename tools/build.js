@@ -48,7 +48,12 @@ function main() {
 
   // Frontend.
   const fe = path.join(DIST, 'frontend');
-  copyDir(path.join(ROOT, 'frontend'), fe, stamp);
+  // Every module import carries the version, so a phone never mixes a new app.js with an old
+  // cached api.js (happened on 7. 10. 2026: "api.cachedData is not a function").
+  const stampModule = (text) => stamp(text).replace(/(from\s+'\.\/[\w-]+\.js)'/g, `$1?v=${v}'`);
+  copyDir(path.join(ROOT, 'frontend'), fe, (text, file) => (file && file.endsWith('.js') ? stampModule(text) : stamp(text)));
+  // Cloudflare Pages: always revalidate the page and scripts.
+  fs.writeFileSync(path.join(fe, '_headers'), '/*\n  Cache-Control: no-cache\n');
   fs.copyFileSync(path.join(ROOT, 'shared', 'schedule.js'), path.join(fe, 'schedule.js'));
   const backends = (process.env.BACKENDS || '').split(',').map((s) => s.trim()).filter(Boolean);
   const config = {

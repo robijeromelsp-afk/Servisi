@@ -167,6 +167,8 @@ function createBackend(opts = {}) {
       computeDigest: (alg, s) => Array.from(crypto.createHash(alg).update(String(s)).digest()),
       base64EncodeWebSafe: (b) => Buffer.from(b).toString('base64url'),
       base64Encode: (b) => Buffer.from(b).toString('base64'),
+      base64DecodeWebSafe: (s) => Array.from(Buffer.from(String(s), 'base64url')),
+      computeHmacSha256Signature: (v, k) => Array.from(crypto.createHmac('sha256', String(k)).update(String(v)).digest()),
       base64Decode: (s) => { const b = Buffer.from(s, 'base64'); if (s && !b.length) throw new Error('bad'); return Array.from(b); },
       newBlob: (data, mime, name) => makeBlob(data, mime, name),
       zip: (blobs, name) => {

@@ -4,6 +4,8 @@ import { t, getLang } from './i18n.js';
 const CFG = window.SERVISI_CONFIG || { backends: [], googleClientId: '' };
 const TOKEN_KEY = 'servisi.idToken';
 const BACKEND_KEY = 'servisi.backend';
+const SESSIONS_KEY = 'servisi.sessions';
+const CACHE_PREFIX = 'servisi.cache.';
 
 function store(key, value) {
   try {
@@ -31,10 +33,46 @@ function tokenExpiry(token) {
   }
 }
 
-export function hasValidToken() {
+// Session tokens issued by each backend after a Google sign-in (valid 30 days; Google's own token lives 1 hour).
+let sessions = {};
+try { sessions = JSON.parse(load(SESSIONS_KEY) || '{}') || {}; } catch (e) { sessions = {}; }
+
+function sessionExpiry(token) {
+  try {
+    const p = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(p + '==='.slice((p.length + 3) % 4))).x * 1000;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function sessionFor(url) {
+  const s = url && sessions[url];
+  return s && sessionExpiry(s) - Date.now() > 60 * 1000 ? s : null;
+}
+
+function setSession(url, token) {
+  if (token) sessions[url] = token; else delete sessions[url];
+  store(SESSIONS_KEY, JSON.stringify(sessions));
+}
+
+function googleTokenValid() {
   if (!idToken) return false;
   if (idToken.startsWith('fake:')) return true; // local development server only
   return tokenExpiry(idToken) - Date.now() > 60 * 1000;
+}
+
+export function hasValidToken() {
+  return !!sessionFor(backendUrl) || googleTokenValid();
+}
+
+/** Last data loaded from the backend, shown at once on the next start while fresh data loads. */
+export function cachedData() {
+  try { return backendUrl ? JSON.parse(load(CACHE_PREFIX + backendUrl) || 'null') : null; } catch (e) { return null; }
+}
+
+export function saveCachedData(data) {
+  try { if (backendUrl) store(CACHE_PREFIX + backendUrl, JSON.stringify(data)); } catch (e) { /* storage full: ignore */ }
 }
 
 export function setToken(token) {
@@ -44,6 +82,9 @@ export function setToken(token) {
 
 export function signOut() {
   setToken(null);
+  if (backendUrl) store(CACHE_PREFIX + backendUrl, null);
+  sessions = {};
+  store(SESSIONS_KEY, null);
   store(BACKEND_KEY, null);
   backendUrl = null;
   try { window.google?.accounts.id.disableAutoSelect(); } catch (e) { /* ignore */ }
@@ -87,7 +128,7 @@ async function post(url, action, data, timeoutMs = 60000) {
     res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, idToken, data, lang: getLang() }),
+      body: JSON.stringify({ action, idToken: sessionFor(url) || idToken, data, lang: getLang() }),
       redirect: 'follow',
       signal: ctrl.signal
     });
@@ -104,8 +145,9 @@ async function post(url, action, data, timeoutMs = 60000) {
   } catch (e) {
     throw new ApiError('BAD_RESPONSE', t('The server returned an unexpected answer (HTTP {s}).', { s: res.status }));
   }
+  if (body.session) setSession(url, body.session);
   if (!body.ok) {
-    if (body.error.code === 'AUTH') setToken(null);
+    if (body.error.code === 'AUTH') { setSession(url, null); setToken(null); }
     throw new ApiError(body.error.code, body.error.message);
   }
   return body.data;

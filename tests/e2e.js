@@ -91,6 +91,25 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   errors.splice(errorsBefore, errors.length - errorsBefore,
     ...errors.slice(errorsBefore).filter((e) => !/status of 404/.test(e)));
 
+  step('session token is kept; last data is shown at once while the backend is slow');
+  const sessions = JSON.parse(await page.evaluate(() => localStorage.getItem('servisi.sessions')) || '{}');
+  assert.ok(Object.values(sessions).some((v) => v.startsWith('s1.')), 'backend issued a session token');
+  const usedSession = [];
+  await page.route('**/*', async (r) => {
+    const req = r.request();
+    if (req.method() === 'POST' && /"action":"bootstrap"/.test(req.postData() || '')) {
+      usedSession.push(JSON.parse(req.postData()).idToken.slice(0, 12));
+      await new Promise((res) => setTimeout(res, 3000));
+    }
+    return r.fallback();
+  });
+  await page.evaluate(() => { location.hash = '#/'; });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('h1:has-text("Overview")', { timeout: 1500 });
+  await page.waitForTimeout(3500);
+  assert.ok(usedSession.length && usedSession.every((x) => x.startsWith("s1.")), "requests use the session token: " + usedSession);
+  await page.unroute('**/*');
+
   step('add second obligation (quarterly by calendar) and an incomplete one');
   await page.click('a:has-text("K1 – Boiler room 1")');
   await page.click('text=Add obligation');

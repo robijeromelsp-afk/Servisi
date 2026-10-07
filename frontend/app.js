@@ -96,8 +96,25 @@ async function enter() {
         return showSignIn(t('The account {e} is not on the access list. Ask your administrator to add it.', { e: email }));
       }
     }
-    await reload();
+    const cached = api.cachedData();
     window.addEventListener('hashchange', route);
+    if (cached) {
+      // Show the last known data at once; fresh data replaces it as soon as it arrives.
+      applyState(cached);
+      route();
+      reload().then(async () => {
+        if (app.querySelector('form') || document.querySelector('dialog[open]')) return; // do not disturb typing
+        const y = window.scrollY;
+        await route();
+        window.scrollTo(0, y);
+      })
+        .catch((e) => {
+          if (e.code === 'AUTH' || e.code === 'FORBIDDEN') { api.signOut(); return showSignIn(e.message); }
+          toast(t('Could not refresh the data: {m}', { m: e.message }));
+        });
+      return;
+    }
+    await reload();
     route();
   } catch (e) {
     if (e.code === 'AUTH' || e.code === 'FORBIDDEN') { api.signOut(); return showSignIn(e.message); }
@@ -138,7 +155,13 @@ function showSetup(target) {
 }
 
 async function reload() {
-  state = await api.call('bootstrap');
+  const data = await api.call('bootstrap');
+  api.saveCachedData(data);
+  applyState(data);
+}
+
+function applyState(data) {
+  state = data;
   if (state.settings.language && state.settings.language !== getLang()) setLang(state.settings.language);
   translateStatic();
   document.getElementById('org-name').textContent = state.org.name;

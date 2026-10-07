@@ -63,6 +63,7 @@ function doPost(e) {
   var action = '';
   REQ_T0_ = Date.now();
   REQ_PHASES_ = [];
+  REQ_AUTH_ = null;
   try {
     var req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     lang = req.lang === 'sl' ? 'sl' : 'en';
@@ -70,6 +71,14 @@ function doPost(e) {
     out = { ok: true, data: handle_(req) };
   } catch (err) {
     out = errorOut_(err, lang);
+  }
+  // A Google sign-in (or a session that is getting old) is answered with a fresh session token.
+  try {
+    if (out.ok && REQ_AUTH_ && (REQ_AUTH_.google || REQ_AUTH_.renew) && prop_('OAUTH_CLIENT_ID') === REQ_AUTH_.aud) {
+      out.session = issueSession_(REQ_AUTH_.email, REQ_AUTH_.aud);
+    }
+  } catch (e) {
+    console.error('Session: ' + e);
   }
   logRequest_(action, out);
   return json_(out);

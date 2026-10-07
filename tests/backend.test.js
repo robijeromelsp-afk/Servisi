@@ -532,3 +532,41 @@ test('RequestLog: failures and slow requests are logged, fast ones and sign-in e
   assert.equal(rows()[1].ok, 'true');
   assert.match(rows()[1].phases, /done=\d+$/);
 });
+
+test('sessions: a Google sign-in returns a 30-day session token that replaces it', () => {
+  const b = setUp();
+  const raw = (action, idToken) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({ action, idToken, data: {} }) } }).getContent());
+  const first = b.call('bootstrap', OWNER);
+  assert.ok(first.session && first.session.startsWith('s1.'));
+  const r = raw('bootstrap', first.session);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.me.email, OWNER);
+  assert.equal(r.session, undefined, 'a fresh session is not renewed');
+  // Tampered: another e-mail in the payload with the old signature.
+  const [, , sig] = first.session.split('.');
+  const forged = 's1.' + Buffer.from(JSON.stringify({ e: USER, x: 9999999999, a: b.state.clientId })).toString('base64url') + '.' + sig;
+  assert.equal(raw('bootstrap', forged).error.code, 'AUTH');
+  assert.equal(raw('bootstrap', first.session + 'x').error.code, 'AUTH');
+  // Old session is renewed, expired one is refused.
+  const start = b.state.now.getTime();
+  b.setNow(new Date(start + 20 * 86400000).toISOString());
+  const renewed = raw('bootstrap', first.session);
+  assert.equal(renewed.ok, true);
+  assert.ok(renewed.session && renewed.session !== first.session);
+  b.setNow(new Date(start + 31 * 86400000).toISOString());
+  assert.equal(raw('bootstrap', first.session).error.code, 'AUTH');
+  assert.equal(raw('bootstrap', renewed.session).ok, true);
+});
+
+test('sessions: removing a user from the access list takes effect at once', () => {
+  const b = setUp();
+  const boot = b.ok('bootstrap', OWNER);
+  b.ok('saveUser', OWNER, { email: USER, display_name: 'U', role: 'User', active: 'true' });
+  const s = b.call('bootstrap', USER).session;
+  const raw = (idToken) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({ action: 'bootstrap', idToken, data: {} }) } }).getContent());
+  assert.equal(raw(s).ok, true);
+  const u = b.ok('bootstrap', OWNER).users.find((x) => x.email === USER);
+  b.ok('saveUser', OWNER, { id: u.id, rev: u.rev, email: USER, display_name: 'U', role: 'User', active: 'false' });
+  assert.equal(raw(s).error.code, 'FORBIDDEN');
+  assert.ok(boot);
+});

@@ -21,6 +21,10 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 7. 10. 2026: **prijava velja 30 dni.** Po Google prijavi zaledje izda svoj podpisan žeton (`s1.…`, HMAC s
+  Script Property `SESSION_SECRET`, ustvari se sam); obnovi se, ko ima manj kot 15 dni. Vsak klic še vedno preveri
+  seznam uporabnikov, zato odstranitev uporabnika velja takoj. Zamenjava `SESSION_SECRET` odjavi vse.
+  Stran ob zagonu takoj pokaže zadnje znane podatke (localStorage) in jih v ozadju osveži; odjava jih pobriše.
 - 6. 10. 2026: **brez plačljivih storitev** (Claude API ključ ni v načrtu). Ideja za kasneje: predloge
   zapisnikov, ki se izpolnjujejo na telefonu ob servisu – MANJKA primer pravega zapisnika.
 - 6. 10. 2026: za Lucijo se zaenkrat **nič ne postavlja**; ni odločeno, ali bo podatke imela na svojem

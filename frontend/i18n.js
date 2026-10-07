@@ -135,6 +135,8 @@ const SL = {
   'Remind me': 'Opomni me',
   'History': 'Zgodovina',
   'Loading history…': 'Nalagam zgodovino…',
+  'History could not be loaded: {m}': 'Zgodovine ni bilo mogoče naložiti: {m}',
+  'Try again': 'Poskusi znova',
   'Not done yet in this application.': 'V tej aplikaciji še ni bilo opravljeno.',
   'Skipped due date {d}': 'Izpuščen rok {d}',
   'Passed over because the previous due date was done late (calendar counting).': 'Preskočen, ker je bil prejšnji rok opravljen z zamudo (štetje po koledarju).',
@@ -304,6 +306,12 @@ const SL = {
   'Result': 'Rezultat',
   'E-mail quota left today': 'Preostala dnevna kvota pošte',
   'Recent e-mails': 'Zadnja sporočila',
+  'mail:Monthly': 'Mesečna pošta',
+  'mail:Warning': 'Opozorilo pred rokom',
+  'mail:Snooze': 'Opomnik',
+  'mail:WeeklyOverdue': 'Tedenski opomnik',
+  'mail:Test': 'Testno sporočilo',
+  'mail:Quote': 'Povpraševanje',
   'Sent': 'Poslano',
   'Kind ': 'Vrsta',
   'To': 'Prejemnik',
@@ -364,7 +372,12 @@ const SL = {
   'No organisation selected.': 'Organizacija ni izbrana.'
 };
 
-const DICTS = { sl: SL, en: {} };
+const EN = {
+  'mail:Monthly': 'Monthly', 'mail:Warning': 'Warning before due', 'mail:Snooze': 'Reminder',
+  'mail:WeeklyOverdue': 'Weekly reminder', 'mail:Test': 'Test e-mail', 'mail:Quote': 'Quote request'
+};
+
+const DICTS = { sl: SL, en: EN };
 
 function load() {
   try { return localStorage.getItem(KEY); } catch (e) { return null; }

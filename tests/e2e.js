@@ -71,6 +71,26 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   assert.equal((await page.textContent('.due')).trim(), '15.01.2026');
   assert.ok(await page.isVisible('.chip.overdue'));
 
+  step('history survives an HTML/404 answer from Apps Script');
+  const isHistory = (req) => req.method() === 'POST' && /"action":"history"/.test(req.postData() || '');
+  const errorsBefore = errors.length;
+  let failures = 1;
+  await page.route('**/*', (r) => (isHistory(r.request()) && failures-- > 0
+    ? r.fulfill({ status: 404, contentType: 'text/html', body: '<html>Not Found</html>' }) : r.fallback()));
+  await page.reload();
+  await page.waitForSelector('text=Not done yet in this application.');
+  failures = 99;
+  await page.reload();
+  await page.waitForSelector('text=History could not be loaded', { timeout: 15000 });
+  assert.ok(await page.isVisible('text=Next due'), 'obligation stays visible');
+  failures = 0;
+  await page.click('button:has-text("Try again")');
+  await page.waitForSelector('text=Not done yet in this application.');
+  await page.unroute('**/*');
+  // The 404s above were injected on purpose; any other browser error still fails the test.
+  errors.splice(errorsBefore, errors.length - errorsBefore,
+    ...errors.slice(errorsBefore).filter((e) => !/status of 404/.test(e)));
+
   step('add second obligation (quarterly by calendar) and an incomplete one');
   await page.click('a:has-text("K1 – Boiler room 1")');
   await page.click('text=Add obligation');
@@ -222,6 +242,56 @@ const dmy = (d) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
   await page.fill('dialog input[name=name]', 'Vrsta SL');
   await page.click('dialog button.primary');
   await page.waitForSelector('.item:has-text("Vrsta SL")');
+
+  step('no English text left on any screen in Slovenian');
+  const dict = await page.evaluate(async () => {
+    const src = await (await fetch('/i18n.js')).text();
+    const m = [...src.matchAll(/^\s+'((?:[^'\\]|\\.)+)':\s*\n?\s*'((?:[^'\\]|\\.)*)'/gm)];
+    return m.map((x) => [x[1].replace(/\\'/g, "'"), x[2].replace(/\\'/g, "'")]);
+  });
+  // English phrases that must not appear (only those that really differ in Slovenian and are not placeholders).
+  const english = dict.filter(([en, sl]) => en !== sl && !en.includes('{') && !en.startsWith('mail:') && /[a-z]{3}/.test(en) && en.trim().length > 3).map(([en]) => en.trim());
+  await page.goto(BASE + '/#/objects');
+  await page.uncheck('text=Prikaži arhivirane').catch(() => {});
+  await page.click('main a.btn.primary'); // add object
+  await page.fill('input[name=name]', 'Toplarna');
+  await page.click('form button.primary');
+  await page.waitForSelector('.actions a.primary');
+  const objUrl = page.url();
+  await page.click('.actions a.primary'); // add obligation
+  await page.waitForSelector('input[name=type_label]');
+  const screens = [['obligation form', null]];
+  const leftovers = [];
+  const scan = async (name) => {
+    const text = await page.innerText('body');
+    const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (const en of english) {
+      if (new RegExp('(^|[^\\p{L}])' + esc(en) + '($|[^\\p{L}])', 'u').test(text)) leftovers.push(`${name}: "${en}"`);
+    }
+  };
+  await scan('obligation form');
+  await page.fill('input[name=type_label]', 'Test SL');
+  await page.selectOption('select[name=rule_type]', 'leto');
+  await page.fill('input[name=rule_day]', '1');
+  await page.selectOption('select[name=rule_month]', '1');
+  await page.fill('input[name=start_date]', '2026-01-01');
+  await page.click('form button.primary');
+  await page.waitForSelector('.due');
+  await scan('obligation');
+  const oblUrl = page.url();
+  await page.goto(oblUrl + '/done'); await page.waitForSelector('input[name=done_date]'); await scan('mark done');
+  await page.goto(oblUrl); await page.waitForSelector('.due');
+  await page.click('main .actions button:nth-of-type(2)'); await page.waitForSelector('dialog'); await scan('quote dialog');
+  await page.keyboard.press('Escape');
+  await page.goto(objUrl); await page.waitForSelector('h1'); await scan('object');
+  for (const route of ['/', '/objects']) { await page.goto(BASE + '/#' + route); await page.waitForTimeout(300); await scan(route); }
+  for (const tab of ['general', 'users', 'types', 'contractors', 'kinds', 'storage', 'status', 'data']) {
+    await page.goto(BASE + '/#/settings/' + tab); await page.waitForTimeout(400); await scan('settings ' + tab);
+  }
+  for (const tabName of ['Zamujeno', 'Ta mesec', 'Naslednji mesec', 'Opomniki', 'Potrebno pozornosti']) {
+    await page.goto(BASE + '/#/'); await page.click(`.tab:has-text("${tabName}")`); await scan('overview ' + tabName);
+  }
+  assert.deepEqual([...new Set(leftovers)], [], 'untranslated English text');
 
   assert.deepEqual(errors, [], 'no browser errors');
   console.log('E2E OK');

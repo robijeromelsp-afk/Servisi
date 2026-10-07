@@ -21,6 +21,10 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 6. 10. 2026: **brez plačljivih storitev** (Claude API ključ ni v načrtu). Ideja za kasneje: predloge
+  zapisnikov, ki se izpolnjujejo na telefonu ob servisu – MANJKA primer pravega zapisnika.
+- 6. 10. 2026: za Lucijo se zaenkrat **nič ne postavlja**; ni odločeno, ali bo podatke imela na svojem
+  ali Robijevem Drive (ali aplikacije sploh ne bo uporabljala). Obe različici opisani v `POSTAVITEV.md`, C1/C2.
 - 6. 10. 2026: oznaka objekta je neobvezna (prikaz samo imena, če je oznaka prazna ali enaka imenu);
   vrsto objekta se lahko vpiše prosto – nova se doda v šifrant. Povpraševanje: glavni gumb »Odpri kot osnutek«,
   nato »Pošlji meni za posredovanje« (na službeni naslov), nato »Pošlji izvajalcu«. Office 365 (pot c) – Robi se
@@ -60,6 +64,18 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 6. `docs/SELITEV.md` – postopek selitve prilog.
 
 ## Pasti
+- 7. 10. 2026: Apps Script je pri branju zgodovine po shranjeni izvedbi vrnil **HTTP 404** (HTML namesto JSON),
+  zaledje je bilo ob preverjanju takoj nato v redu. Vzrok ni ugotovljen (MANJKA: dnevnik izvajanj Apps Script
+  za tisti čas). Zdaj: bralni klici (`bootstrap`, `history`, `status`, `whoami`) se ob takem odgovoru ponovijo
+  do 2-krat; neuspelo nalaganje zgodovine ne podre več zaslona obveznosti. Pisalni klici se ne ponavljajo sami
+  (`markDone` ima zaščito `expected_due`, ponovitev ne more dvakrat zapisati iste izvedbe).
+  7. 10. 2026 je Claude isto stran »Page Not Found« (HTML, 404) dobil sam, takoj po objavi testnega zaledja –
+  Google jo občasno vrne tudi brez napake v naši kodi. Zaledje zdaj počasne (> 2 s) in neuspele klice zapiše v list
+  `RequestLog` (časi faz: auth, user, lock, done); Claude ga bere prek Drive priključka.
+- Prvi klic po objavi z novim `SCHEMA_VERSION` traja dolgo (izmerjeno 12,6 s za dodajanje lista) – enkratno.
+- Pri prevajanju: besedila, ki so hkrati vrednosti (npr. 'Overdue', 'Report', 'User'), so bila izpuščena iz
+  samodejnega ovijanja s t() – zavihki na Pregledu so ostali angleški. Zdaj e2e v slovenščini obišče vse zaslone
+  in javi vsako angleško besedilo iz slovarja (`tests/e2e.js`, korak »no English text left«).
 - Ime spremenljivke `t` v funkciji zasenči prevajalnik `t()` (zgodilo se v obrazcu obveznosti) – ne uporabljaj `t` kot ime.
 - Nov stolpec v SCHEMA: povečaj `SCHEMA_VERSION` v `backend/db.js`, sicer obstoječa tabela ne dobi stolpca do dnevnega teka.
 - Iz oblačnega okolja Claude `*.pages.dev` in `servisi.dolb.si` nista dosegljiva (proxy 403); `script.google.com` je.

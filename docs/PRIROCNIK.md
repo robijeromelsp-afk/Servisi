@@ -69,6 +69,10 @@ MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
   za tisti čas). Zdaj: bralni klici (`bootstrap`, `history`, `status`, `whoami`) se ob takem odgovoru ponovijo
   do 2-krat; neuspelo nalaganje zgodovine ne podre več zaslona obveznosti. Pisalni klici se ne ponavljajo sami
   (`markDone` ima zaščito `expected_due`, ponovitev ne more dvakrat zapisati iste izvedbe).
+  7. 10. 2026 je Claude isto stran »Page Not Found« (HTML, 404) dobil sam, takoj po objavi testnega zaledja –
+  Google jo občasno vrne tudi brez napake v naši kodi. Zaledje zdaj počasne (> 2 s) in neuspele klice zapiše v list
+  `RequestLog` (časi faz: auth, user, lock, done); Claude ga bere prek Drive priključka.
+- Prvi klic po objavi z novim `SCHEMA_VERSION` traja dolgo (izmerjeno 12,6 s za dodajanje lista) – enkratno.
 - Pri prevajanju: besedila, ki so hkrati vrednosti (npr. 'Overdue', 'Report', 'User'), so bila izpuščena iz
   samodejnega ovijanja s t() – zavihki na Pregledu so ostali angleški. Zdaj e2e v slovenščini obišče vse zaslone
   in javi vsako angleško besedilo iz slovarja (`tests/e2e.js`, korak »no English text left«).

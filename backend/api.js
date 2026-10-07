@@ -47,24 +47,58 @@ function doGet() {
   return json_({ ok: true, data: { app: 'servisi', version: APP_VERSION, setUp: !!prop_('SPREADSHEET_ID') } });
 }
 
+/** Requests slower than this (ms) are written to RequestLog, as are all failures except sign-in. */
+var SLOW_REQUEST_MS = 4000;
+var REQ_T0_ = 0;
+var REQ_PHASES_ = [];
+
+/** Records the time since the start of the request, for RequestLog. */
+function mark_(name) {
+  REQ_PHASES_.push(name + '=' + (Date.now() - REQ_T0_));
+}
+
 function doPost(e) {
   var out;
   var lang = 'en';
+  var action = '';
+  REQ_T0_ = Date.now();
+  REQ_PHASES_ = [];
   try {
     var req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     lang = req.lang === 'sl' ? 'sl' : 'en';
+    action = String(req.action || '');
     out = { ok: true, data: handle_(req) };
   } catch (err) {
-    if (!err.appCode) console.error(err && err.stack ? err.stack : err);
-    out = {
-      ok: false,
-      error: {
-        code: err.appCode || 'ERROR',
-        message: translateError_(err.appCode ? err.message : 'Unexpected server error: ' + (err && err.message), lang)
-      }
-    };
+    out = errorOut_(err, lang);
   }
+  logRequest_(action, out);
   return json_(out);
+}
+
+function logRequest_(action, out) {
+  try {
+    var ms = Date.now() - REQ_T0_;
+    var code = out.ok ? '' : out.error.code;
+    if ((out.ok && ms < SLOW_REQUEST_MS) || code === 'AUTH' || !prop_('SPREADSHEET_ID')) return;
+    db_().table('RequestLog').insert('', {
+      action: action, ms: String(ms), ok: String(out.ok), code: code,
+      message: out.ok ? '' : String(out.error.message).slice(0, 300),
+      phases: REQ_PHASES_.join(' '), app_version: APP_VERSION
+    }, 'request');
+  } catch (e) {
+    console.error('RequestLog: ' + e);
+  }
+}
+
+function errorOut_(err, lang) {
+  if (!err.appCode) console.error(err && err.stack ? err.stack : err);
+  return {
+    ok: false,
+    error: {
+      code: err.appCode || 'ERROR',
+      message: translateError_(err.appCode ? err.message : 'Unexpected server error: ' + (err && err.message), lang)
+    }
+  };
 }
 
 function json_(obj) {
@@ -82,13 +116,17 @@ function handle_(req) {
   var def = actions_()[action];
   if (!def) throw appError_('BAD_REQUEST', 'Unknown action: ' + action);
   var auth = verifyIdToken_(req.idToken, false);
+  mark_('auth');
   if (!prop_('SPREADSHEET_ID')) throw appError_('NOT_SET_UP', 'The application has not been set up yet.');
   var user = findUser_(auth.email);
   if (!user) throw appError_('FORBIDDEN', 'Your account is not on the access list.');
   if (def[1] === 'Admin' && user.role !== 'Admin') throw appError_('FORBIDDEN', 'Only an administrator can do this.');
   var tz = orgTimezone_(user.org_id);
   var ctx = { user: user, email: user.email, orgId: user.org_id, tz: tz, today: today_(tz) };
-  return def[2] ? withLock_(function () { resetDbCache_(); return def[0](ctx, data); }) : def[0](ctx, data);
+  mark_('user');
+  var result = def[2] ? withLock_(function () { mark_('lock'); resetDbCache_(); return def[0](ctx, data); }) : def[0](ctx, data);
+  mark_('done');
+  return result;
 }
 
 function withLock_(fn) {

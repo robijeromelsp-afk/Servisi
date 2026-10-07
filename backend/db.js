@@ -35,14 +35,16 @@ var SCHEMA = {
   QuoteRequests: ['obligation_id', 'contractor_id', 'recipient', 'subject', 'body', 'method', 'sent_at'],
   MailLog: ['kind', 'period', 'recipient', 'ref_id', 'items', 'sent_at', 'ok', 'error'],
   AuditLog: ['entity', 'entity_id', 'action', 'by', 'at', 'before_json', 'after_json'],
-  Status: ['key', 'value']
+  Status: ['key', 'value'],
+  // Slow or failed requests (diagnostics; no request data, no tokens).
+  RequestLog: ['action', 'ms', 'ok', 'code', 'message', 'phases', 'app_version']
 };
 
 /** Tables that are not audited themselves (they are logs). */
-var UNAUDITED = { AuditLog: true, MailLog: true, Status: true };
+var UNAUDITED = { AuditLog: true, MailLog: true, Status: true, RequestLog: true };
 
 /** Raise when SCHEMA changes; the first request after a deployment then adds the new columns. */
-var SCHEMA_VERSION = '3';
+var SCHEMA_VERSION = '4';
 
 var DB_CACHE_ = null;
 

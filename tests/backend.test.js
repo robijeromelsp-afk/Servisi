@@ -514,3 +514,21 @@ test('obligation: type and contractor can be typed; new ones are added to the li
   assert.equal(o3.contractor_id, '');
   assert.equal(b.call('saveObligation', OWNER, { object_id: obj.id, type_name: '', ...YEARLY }).ok, false);
 });
+
+test('RequestLog: failures and slow requests are logged, fast ones and sign-in errors are not', () => {
+  const b = setUp();
+  const rows = () => b.ctx.db_().table('RequestLog').list('');
+  b.ok('bootstrap', OWNER);
+  b.call('bootstrap', 'nobody@example.com', {}, 'wrong-audience');
+  assert.equal(rows().length, 0);
+  b.call('history', OWNER, { obligation_id: 'missing' });
+  assert.equal(rows().length, 1);
+  assert.equal(rows()[0].action, 'history');
+  assert.equal(rows()[0].ok, 'false');
+  assert.match(rows()[0].phases, /auth=\d+ user=\d+/);
+  require('node:vm').runInContext('SLOW_REQUEST_MS = -1;', b.ctx);
+  b.ok('bootstrap', OWNER);
+  assert.equal(rows().length, 2);
+  assert.equal(rows()[1].ok, 'true');
+  assert.match(rows()[1].phases, /done=\d+$/);
+});

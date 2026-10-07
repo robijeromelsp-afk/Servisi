@@ -48,7 +48,7 @@ function doGet() {
 }
 
 /** Requests slower than this (ms) are written to RequestLog, as are all failures except sign-in. */
-var SLOW_REQUEST_MS = 4000;
+var SLOW_REQUEST_MS = 2000;
 var REQ_T0_ = 0;
 var REQ_PHASES_ = [];
 

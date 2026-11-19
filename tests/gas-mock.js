@@ -106,6 +106,11 @@ class Folder {
   addViewer(e) { this.viewers.push(e); return this; }
 }
 
+/** Development / test sign-in token, shaped like a JWT so the backend's format check accepts it. */
+function fakeToken(email, aud) {
+  return 'fake.' + Buffer.from(email + ':' + aud).toString('base64url') + '.x';
+}
+
 function makeBlob(data, mime, name) {
   const bytes = Buffer.isBuffer(data) ? data : Buffer.from(Array.isArray(data) ? data : String(data), Array.isArray(data) ? undefined : 'utf8');
   return {
@@ -181,8 +186,9 @@ function createBackend(opts = {}) {
         state.fetches++;
         const m = /id_token=([^&]+)/.exec(url);
         const token = m ? decodeURIComponent(m[1]) : '';
-        // Fake token format: fake:<email>:<aud>[:expired]
-        const p = token.split(':');
+        // Fake token format (JWT-shaped): fake.<base64url "email:aud[:expired]">.x
+        const parts = token.split('.');
+        const p = parts[0] === 'fake' && parts.length === 3 ? ('fake:' + Buffer.from(parts[1], 'base64url').toString()).split(':') : [];
         const ok = p[0] === 'fake' && p.length >= 3 && p[3] !== 'expired';
         const body = ok ? {
           iss: 'https://accounts.google.com', aud: p.slice(2, 3)[0], email: p[1], email_verified: 'true',
@@ -225,7 +231,7 @@ function createBackend(opts = {}) {
   vm.runInContext('now_ = function () { return new Date(__now__()); };', Object.assign(ctx, { __now__: () => state.now.getTime() }));
 
   function call(action, email, data, aud) {
-    const idToken = email ? `fake:${email}:${aud || state.clientId}` : '';
+    const idToken = email ? fakeToken(email, aud || state.clientId) : '';
     const res = ctx.doPost({ postData: { contents: JSON.stringify({ action, idToken, data }) } });
     return JSON.parse(res.getContent());
   }
@@ -242,4 +248,4 @@ function createBackend(opts = {}) {
   };
 }
 
-module.exports = { createBackend };
+module.exports = { createBackend, fakeToken };

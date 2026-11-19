@@ -81,7 +81,8 @@ var ERROR_PATTERNS_SL = [
     function (m) { return 'Rok se je medtem spremenil (zdaj ' + m[1] + '). Osvežite in poskusite znova.'; }],
   [/^The e-mail could not be sent: (.*)$/, function (m) { return 'Sporočila ni bilo mogoče poslati: ' + m[1]; }],
   [/^Unknown action: (.*)$/, function (m) { return 'Neznano dejanje: ' + m[1]; }],
-  [/^Unexpected server error: (.*)$/, function (m) { return 'Nepričakovana napaka strežnika: ' + m[1]; }]
+  [/^Unexpected server error: (.*)$/, function (m) { return 'Nepričakovana napaka strežnika: ' + m[1]; }],
+  [/^Unexpected server error\. The details were recorded\.$/, function () { return 'Nepričakovana napaka strežnika. Podrobnosti so zapisane.'; }]
 ];
 
 function labelSl_(label) {

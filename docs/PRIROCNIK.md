@@ -21,6 +21,9 @@ Načrt: `docs/NACRT.md` (potrjen 5. 10. 2026). Postavitev: `docs/POSTAVITEV.md`.
 MailApp, sprožilci). To se preveri na testni postavitvi `robi-test`.
 
 ## Odločitve
+- 19. 11. 2026: varnostni pregled (`docs/VARNOST.md`): CSP in varnostne glave strani, odjava vseh naprav,
+  zavrnitev neveljavnih žetonov brez klica Googla, brez notranjih podrobnosti v napakah, zaščita CSV izvoza,
+  akcije GitHub pripete na SHA. Testni žetoni so zdaj oblike JWT (`fake.<base64url>.x`).
 - 7. 10. 2026: **prijava velja 30 dni.** Po Google prijavi zaledje izda svoj podpisan žeton (`s1.…`, HMAC s
   Script Property `SESSION_SECRET`, ustvari se sam); obnovi se, ko ima manj kot 15 dni. Vsak klic še vedno preveri
   seznam uporabnikov, zato odstranitev uporabnika velja takoj. Zamenjava `SESSION_SECRET` odjavi vse.

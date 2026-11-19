@@ -58,7 +58,7 @@ function setSession(url, token) {
 
 function googleTokenValid() {
   if (!idToken) return false;
-  if (idToken.startsWith('fake:')) return true; // local development server only
+  if (idToken.startsWith('fake.')) return true; // local development server only
   return tokenExpiry(idToken) - Date.now() > 60 * 1000;
 }
 

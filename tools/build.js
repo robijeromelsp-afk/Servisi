@@ -53,7 +53,16 @@ function main() {
   const stampModule = (text) => stamp(text).replace(/(from\s+'\.\/[\w-]+\.js)'/g, `$1?v=${v}'`);
   copyDir(path.join(ROOT, 'frontend'), fe, (text, file) => (file && file.endsWith('.js') ? stampModule(text) : stamp(text)));
   // Cloudflare Pages: always revalidate the page and scripts.
-  fs.writeFileSync(path.join(fe, '_headers'), '/*\n  Cache-Control: no-cache\n');
+  // Plus: the page may not be shown inside another site's frame, no type guessing, HTTPS only.
+  fs.writeFileSync(path.join(fe, '_headers'), ['/*',
+    '  Cache-Control: no-cache',
+    "  Content-Security-Policy: frame-ancestors 'none'",
+    '  X-Frame-Options: DENY',
+    '  X-Content-Type-Options: nosniff',
+    '  Referrer-Policy: strict-origin-when-cross-origin',
+    '  Strict-Transport-Security: max-age=31536000',
+    '  Permissions-Policy: geolocation=(), microphone=(), payment=(), usb=()',
+    ''].join('\n'));
   fs.copyFileSync(path.join(ROOT, 'shared', 'schedule.js'), path.join(fe, 'schedule.js'));
   const backends = (process.env.BACKENDS || '').split(',').map((s) => s.trim()).filter(Boolean);
   const config = {

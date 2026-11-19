@@ -10,6 +10,7 @@ v kodi so besedila angleška in so ključi; slovenski prevodi so v `frontend/i18
 1. `docs/PRIROCNIK.md` – stanje, odločitve, pasti. Posodobi ga ob vsaki pomembni spremembi.
 2. `docs/NACRT.md` – potrjen načrt (podatkovni model, pravila rokov, zasloni, pošta).
 3. `docs/POSTAVITEV.md` – kako se postavi nova postavitev.
+4. `docs/VARNOST.md` – varnostne zaščite in naloge lastnika. Ob spremembi prijave ali pravic posodobi.
 
 ## Pravila dela (obvezna)
 - Česar ne veš ali nimaš, napiši **MANJKA**. Ne izmišljuj si podatkov, rokov ali vsebine datotek.

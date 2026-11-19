@@ -15,6 +15,8 @@ var IMPORT_TABLES = ['ObjectKinds', 'ObligationGroups', 'ObligationTypes', 'Cont
 
 function csvCell_(v) {
   var s = String(v === null || v === undefined ? '' : v);
+  // A cell starting with = + - @ would run as a formula in Excel or Sheets: keep it text.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 

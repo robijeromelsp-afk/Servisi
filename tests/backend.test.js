@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createBackend } = require('./gas-mock.js');
+const { createBackend, fakeToken } = require('./gas-mock.js');
 
 const OWNER = 'owner@example.com';
 const USER = 'user@example.com';
@@ -414,7 +414,7 @@ test('Slovenian (default): e-mails and error messages', () => {
   assert.ok(b.state.mails.some((m) => /Rok 15\.01\.2027/.test(m.subject)), 'warning in Slovenian');
   // error messages follow the language of the request
   const raw = (lang) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({
-    action: 'saveObject', idToken: `fake:${OWNER}:${b.state.clientId}`, data: { code: 'X', name: '' }, lang }) } }).getContent());
+    action: 'saveObject', idToken: fakeToken(OWNER, b.state.clientId), data: { code: 'X', name: '' }, lang }) } }).getContent());
   assert.equal(raw('sl').error.message, 'Ime je obvezen podatek.');
   assert.equal(raw('en').error.message, 'Name is required.');
   b.ok('saveSettings', OWNER, { values: { language: 'en' } });
@@ -569,4 +569,46 @@ test('sessions: removing a user from the access list takes effect at once', () =
   b.ok('saveUser', OWNER, { id: u.id, rev: u.rev, email: USER, display_name: 'U', role: 'User', active: 'false' });
   assert.equal(raw(s).error.code, 'FORBIDDEN');
   assert.ok(boot);
+});
+
+test('security: malformed tokens are refused without calling Google', () => {
+  const b = setUp();
+  const before = b.state.fetches;
+  for (const tok of ['nonsense', 'a.b', 'x'.repeat(5000), 'a.b.c d']) {
+    const r = JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({ action: 'bootstrap', idToken: tok }) } }).getContent());
+    assert.equal(r.error.code, 'AUTH');
+  }
+  assert.equal(b.state.fetches, before);
+});
+
+test('security: unexpected errors do not reveal internals to the user, but are logged', () => {
+  const b = setUp();
+  require('node:vm').runInContext('apiStatus_ = function () { throw new Error("secret internal detail"); };', b.ctx);
+  const r = b.call('status', OWNER);
+  assert.equal(r.ok, false);
+  assert.doesNotMatch(r.error.message, /secret internal detail/);
+  assert.equal(r.detail, undefined);
+  const log = b.ctx.db_().table('RequestLog').list('');
+  assert.match(log[log.length - 1].message, /secret internal detail/);
+});
+
+test('security: CSV export keeps formula-like cells as text', () => {
+  const b = setUp();
+  assert.equal(b.ctx.csvCell_('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"');
+  assert.equal(b.ctx.csvCell_('+386 1 234'), "'+386 1 234");
+  assert.equal(b.ctx.csvCell_('Kotlovnica'), 'Kotlovnica');
+});
+
+test('security: "sign out all devices" invalidates every session except the caller\'s new one', () => {
+  const b = setUp();
+  const raw = (action, idToken) => JSON.parse(b.ctx.doPost({ postData: { contents: JSON.stringify({ action, idToken, data: {} }) } }).getContent());
+  const s1 = b.call('bootstrap', OWNER).session;
+  const s2 = b.call('bootstrap', OWNER).session;
+  const r = raw('revokeSessions', s1);
+  assert.equal(r.ok, true);
+  assert.ok(r.session);
+  assert.equal(raw('bootstrap', s2).error.code, 'AUTH');
+  assert.equal(raw('bootstrap', s1).error.code, 'AUTH');
+  assert.equal(raw('bootstrap', r.session).ok, true);
+  assert.equal(b.call('revokeSessions', USER).ok, false);
 });

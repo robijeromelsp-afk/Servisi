@@ -49,7 +49,10 @@ function ownerEmail_() {
  */
 function verifyIdToken_(idToken, allowUnboundAudience) {
   if (!idToken) throw appError_('AUTH', 'Sign in required.');
+  if (idToken.length > 4096) throw appError_('AUTH', 'Your sign-in has expired. Sign in again.');
   if (idToken.indexOf(SESSION_PREFIX) === 0) return (REQ_AUTH_ = verifySession_(idToken));
+  // A Google ID token is a JWT; anything else is refused without calling Google (protects the daily quota).
+  if (!/^[\w-]+\.[\w-]+\.[\w-]+$/.test(idToken)) throw appError_('AUTH', 'Your sign-in has expired. Sign in again.');
   var cache = CacheService.getScriptCache();
   var key = 'tok_' + Utilities.base64EncodeWebSafe(
     Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, idToken)).slice(0, 40);
@@ -122,6 +125,14 @@ function issueSession_(email, aud) {
   var exp = Math.floor(now_().getTime() / 1000) + SESSION_DAYS * 86400;
   var payload = Utilities.base64EncodeWebSafe(JSON.stringify({ e: email, x: exp, a: aud })).replace(/=+$/, '');
   return SESSION_PREFIX + payload + '.' + sessionSign_(payload);
+}
+
+/** Signs out every device (all sessions of this deployment); the caller gets a new session. */
+function apiRevokeSessions_(ctx) {
+  setProp_('SESSION_SECRET', Utilities.getUuid() + Utilities.getUuid());
+  kvSet_('Status', ctx.orgId, 'sessions_revoked_at', nowIso_(), ctx.email);
+  if (REQ_AUTH_) REQ_AUTH_.renew = true;
+  return { revokedAt: nowIso_() };
 }
 
 function verifySession_(token) {

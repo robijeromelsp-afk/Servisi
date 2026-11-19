@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1d4ed8">
   <meta name="robots" content="noindex">
+  <!-- Only our own scripts, Google sign-in and the Apps Script backends may run or be contacted. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://script.google.com https://script.googleusercontent.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Servisi</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">

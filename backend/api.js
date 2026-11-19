@@ -37,6 +37,7 @@ function actions_() {
   runDailyJob: [apiRunDailyJob_, 'Admin', true],
   installDailyTrigger: [apiInstallDailyTrigger_, 'Admin', true],
   sendTestEmail: [apiSendTestEmail_, 'Admin', true],
+  revokeSessions: [apiRevokeSessions_, 'Admin', true],
   exportData: [apiExport_, 'Admin', false],
   importData: [apiImport_, 'Admin', true]
   };
@@ -81,6 +82,7 @@ function doPost(e) {
     console.error('Session: ' + e);
   }
   logRequest_(action, out);
+  delete out.detail;
   return json_(out);
 }
 
@@ -91,7 +93,7 @@ function logRequest_(action, out) {
     if ((out.ok && ms < SLOW_REQUEST_MS) || code === 'AUTH' || !prop_('SPREADSHEET_ID')) return;
     db_().table('RequestLog').insert('', {
       action: action, ms: String(ms), ok: String(out.ok), code: code,
-      message: out.ok ? '' : String(out.error.message).slice(0, 300),
+      message: out.ok ? '' : String(out.detail || out.error.message).slice(0, 300),
       phases: REQ_PHASES_.join(' '), app_version: APP_VERSION
     }, 'request');
   } catch (e) {
@@ -105,8 +107,10 @@ function errorOut_(err, lang) {
     ok: false,
     error: {
       code: err.appCode || 'ERROR',
-      message: translateError_(err.appCode ? err.message : 'Unexpected server error: ' + (err && err.message), lang)
-    }
+      // Internal details are not shown to the user (they are written to RequestLog instead).
+      message: translateError_(err.appCode ? err.message : 'Unexpected server error. The details were recorded.', lang)
+    },
+    detail: err.appCode ? '' : String(err && err.message)
   };
 }
 

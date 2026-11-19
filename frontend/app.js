@@ -71,7 +71,7 @@ function showSignIn(message) {
     message ? h('p', { class: 'error' }, message) : null, btn];
   if (api.config().devLogin) {
     const email = h('input', { type: 'email', placeholder: 'e-mail (development only)' });
-    content.push(h('form', { onsubmit: (e) => { e.preventDefault(); api.setToken(`fake:${email.value.trim().toLowerCase()}:${api.config().googleClientId}`); enter(); } },
+    content.push(h('form', { onsubmit: (e) => { e.preventDefault(); api.setToken('fake.' + btoa(`${email.value.trim().toLowerCase()}:${api.config().googleClientId}`).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') + '.x'); enter(); } },
       email, h('div', { class: 'actions' }, h('button', { class: 'primary', type: 'submit' }, 'Sign in (dev)'))));
   } else {
     api.renderGoogleButton(btn, () => enter());
@@ -1024,6 +1024,11 @@ async function settingsStatus(el) {
   run.onclick = busy(run, async () => {
     try { const r = await api.call('runDailyJob'); toast(t('Done. E-mails: monthly {m}, warnings {w}, reminders {r}, weekly {k}.', { m: r.monthly, w: r.warnings, r: r.reminders, k: r.weekly }) + (r.errors.length ? t(' Errors: {e}', { e: r.errors.join('; ') }) : '')); await reload(); route(); } catch (err) { toast(err.message); }
   });
+  const revoke = h('button', { class: 'danger' }, t('Sign out all devices'));
+  revoke.onclick = busy(revoke, async () => {
+    if (!window.confirm(t('Everyone, on every phone and computer, will have to sign in with Google again. Continue?'))) return;
+    try { await api.call('revokeSessions'); toast(t('All devices are signed out. This device stays signed in.')); } catch (err) { toast(err.message); }
+  });
   const install = h('button', {}, t('Install daily trigger'));
   install.onclick = busy(install, async () => { try { await api.call('installDailyTrigger'); toast(t('Installed.')); route(); } catch (err) { toast(err.message); } });
   mount(el, h('div', { class: 'card' }, h('dl', { class: 'kv' },
@@ -1032,6 +1037,10 @@ async function settingsStatus(el) {
     h('dt', {}, t('Result')), h('dd', {}, st.status.last_daily_run_ok === 'true' ? 'OK' : (st.status.last_error || '—')),
     h('dt', {}, t('E-mail quota left today')), h('dd', {}, String(st.mailQuotaLeft)))),
   h('div', { class: 'actions' }, run, install),
+  h('div', { class: 'card' }, h('h3', {}, t('Security')),
+    h('p', { class: 'muted' }, t('Use this if a phone or computer was lost or someone may know a sign-in.')),
+    st.status.sessions_revoked_at ? h('p', { class: 'muted small' }, t('Last time: {d}', { d: fmtDateTime(st.status.sessions_revoked_at) })) : null,
+    h('div', { class: 'actions' }, revoke)),
   h('h2', {}, t('Recent e-mails')),
   h('div', { class: 'card' }, st.recentMail.length ? h('table', {}, h('tr', {}, h('th', {}, t('Sent')), h('th', {}, t('Kind ')), h('th', {}, t('To')), h('th', {}, t('Items')), h('th', {}, t('Result'))),
     st.recentMail.map((m) => h('tr', {}, h('td', {}, fmtDateTime(m.sent_at)), h('td', {}, t('mail:' + m.kind)), h('td', {}, m.recipient), h('td', {}, m.items),
